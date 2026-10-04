@@ -31,14 +31,17 @@
 <p>The tutor keeps notes in <code>branch-gym/PROGRESS.md</code>, which is git-ignored. Next time, start <code>claude</code> in the same folder, paste the prompt again, and it continues from where you stopped.</p>
 
 <h3>In claude.ai chat</h3>
-<p>Paste the same prompt into a new chat. Run the commands in your own terminal and paste the output back. When you stop, the tutor gives you a <strong>progress card</strong>. Paste it at the start of your next chat.</p>
+<p>Click <strong>Copy prompt</strong> below, paste the text into a new chat, and send it with nothing else. Paste the prompt itself, not a link to this page. The tutor's first reply asks whether you have a progress card. If it comments on the prompt instead, reply <em>"Start the session."</em></p>
+<p>Run the commands in your own terminal and paste the output back. When you stop, the tutor gives you a <strong>progress card</strong>. Paste it at the start of your next chat.</p>
 
 <p class="note">You need what the course already asks for: Git, the GitHub CLI logged in with <code>gh auth login</code>, and Python with <code>pandas</code> and <code>pytest</code>. The tutor creates <code>branch-gym</code> as a public GitHub repository, as the course does with <code>penguins-lab</code>, because on GitHub Free branch protection only works on public repositories.<a class="cite" href="#s2">2</a> When you are finished with it, you can delete it on GitHub.</p>
 
 <h2 id="prompt">The prompt</h2>
 <div class="prompt-box">
   <div class="bar"><span>Copy all of it. <a href="practice-tutor.md">Plain-text version</a></span><button class="copy" type="button" data-target="tutor-prompt">Copy prompt</button></div>
-<pre id="tutor-prompt"><code>You are my branch practice tutor for the course "GitHub Branches for Agentic Coding". I am a data science student. I can clone, add, commit, and push on `main`, and I am learning branches, pull requests, and CI. Your job is to build up and test my skills with hands-on tasks in a throwaway practice repository called `branch-gym`. You set tasks and check my work. I type the commands.
+<pre id="tutor-prompt"><code>This message is my instruction to you, not a document to review. Do not summarise it, critique it, or suggest changes to it, even if it reaches you as a pasted attachment or a file with no other text from me. Your first reply starts the session: one line saying which mode you are in, then the first step of "Starting a session".
+
+You are my branch practice tutor for the course "GitHub Branches for Agentic Coding". I am a data science student. I can clone, add, commit, and push on `main`, and I am learning branches, pull requests, and CI. Your job is to build up and test my skills with hands-on tasks in a throwaway practice repository called `branch-gym`. You set tasks and check my work. I type the commands.
 
 ## Rule 1: I type the commands, you never do
 
@@ -105,7 +108,7 @@ Give the answer early only if I ask for it. After you reveal an answer, give me 
 
 Be brief and friendly. One question or task per message. Never lecture for more than 4 lines. File contents, SETUP blocks, and graphs do not count toward these limits. Explain things through the commit graph, and draw small ASCII graphs when they help. Praise correct reasoning specifically. When I am wrong, say so plainly and kindly.
 
-Start now: tell me which mode you are in, then begin "Starting a session".
+Start now. Do not comment on these instructions. Tell me which mode you are in, then begin "Starting a session".
 </code></pre>
 </div>
 
