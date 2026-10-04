@@ -99,3 +99,84 @@ test("log lists reachable commits newest first with refs", () => {
   assert.equal(out.length, 2);
   assert.match(out[0], /HEAD -> main.*two/);
 });
+
+// A branch f with two commits; main either stays put or moves on by one commit.
+const diverged = () => fresh("git commit -m base", "git switch -c f", "git commit -m f1", "git commit -m f2", "git switch main", "git commit -m m1");
+const sorted = (ids) => [...ids].sort();
+
+test("merge-base of two diverged branches is the commit where they split", () => {
+  const s = diverged();
+  const r = run(s, "git merge-base main f");
+  assert.equal(r.out, s.commits[0].id);
+  assert.equal(s.mergeBase, s.commits[0].id);
+  assert.equal(s.highlight, null);
+});
+
+test("merge-base is the older tip when one branch is an ancestor of the other", () => {
+  const s = fresh("git commit", "git commit", "git switch -c f", "git commit");
+  assert.equal(run(s, "git merge-base main f").out, s.branches.main);
+  assert.equal(run(s, "git merge-base f main").out, s.branches.main);
+});
+
+test("three-dot diff stays on the branch when main moves", () => {
+  const s = diverged();
+  run(s, "git diff main...f");
+  assert.equal(s.mergeBase, s.commits[0].id);
+  assert.equal(s.highlight.form, "...");
+  assert.deepEqual(sorted(s.highlight.added), sorted([s.commits[1].id, s.commits[2].id]));
+  assert.deepEqual([...s.highlight.reversed], []);
+});
+
+test("two-dot diff also covers main's commits, reversed, when main moves", () => {
+  const s = diverged();
+  const r = run(s, "git diff main..f");
+  assert.equal(s.highlight.form, "..");
+  assert.deepEqual(sorted(s.highlight.added), sorted([s.commits[1].id, s.commits[2].id]));
+  assert.deepEqual([...s.highlight.reversed], [s.commits[3].id]);
+  assert.match(r.out, /reversed/);
+  run(s, "git diff main f");
+  assert.deepEqual([...s.highlight.reversed], [s.commits[3].id]);
+});
+
+test("both diff forms cover the same commits while main has not moved", () => {
+  const s = fresh("git commit", "git switch -c f", "git commit", "git commit", "git switch main");
+  run(s, "git diff main..f");
+  const twoDot = { added: sorted(s.highlight.added), reversed: [...s.highlight.reversed] };
+  run(s, "git diff main...f");
+  assert.deepEqual({ added: sorted(s.highlight.added), reversed: [...s.highlight.reversed] }, twoDot);
+  assert.equal(twoDot.added.length, 2);
+  assert.deepEqual(twoDot.reversed, []);
+});
+
+test("both diff forms agree again after the branch merges main", () => {
+  const s = diverged();
+  run(s, "git switch f");
+  run(s, "git merge main");
+  assert.equal(run(s, "git merge-base main f").out, s.branches.main);
+  run(s, "git diff main..f");
+  const twoDot = sorted(s.highlight.added);
+  assert.deepEqual([...s.highlight.reversed], []);
+  run(s, "git diff main...HEAD");
+  assert.deepEqual(sorted(s.highlight.added), twoDot);
+  assert.deepEqual([...s.highlight.reversed], []);
+});
+
+test("merge-base and diff reject an unknown branch name", () => {
+  const s = diverged();
+  const mb = run(s, "git merge-base main nope");
+  assert.ok(mb.err);
+  assert.match(mb.out, /Not a valid object name nope/);
+  const d = run(s, "git diff main...nope");
+  assert.ok(d.err);
+  assert.match(d.out, /unknown revision/);
+  assert.equal(s.mergeBase, null);
+  assert.equal(s.highlight, null);
+});
+
+test("a new commit clears the marks from the last diff", () => {
+  const s = diverged();
+  run(s, "git diff main..f");
+  run(s, "git commit");
+  assert.equal(s.mergeBase, null);
+  assert.equal(s.highlight, null);
+});

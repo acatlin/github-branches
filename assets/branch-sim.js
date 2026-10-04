@@ -4,7 +4,11 @@
  *
  * Supports: git commit [-m "msg"], git branch [-d|-D] [name], git switch [-c] name,
  * git checkout [-b] name, git merge [--no-ff] name, git log [--oneline],
- * git status, git push [-u] [origin name], help, clear.
+ * git status, git push [-u] [origin name], git merge-base A B,
+ * git diff A..B, git diff A...B, help, clear.
+ *
+ * The simulator has no file contents, so `git diff` prints no diff text. It
+ * reports which commits' changes the diff covers and highlights them on the graph.
  *
  * Usage:
  *   <div class="sim" id="sim1"></div>
@@ -19,6 +23,7 @@
 
 /**
  * @typedef {{ id: string, parents: string[], msg: string, born: string, n: number }} Commit
+ * @typedef {{ form: ".." | "...", from: string, to: string, added: string[], reversed: string[] }} DiffHighlight
  * @typedef {{
  *   head: string,
  *   branches: Record<string, string>,
@@ -26,10 +31,13 @@
  *   upstream: Record<string, string>,
  *   commits: Commit[],
  *   history: string[],
+ *   mergeBase: string | null,
+ *   highlight: DiffHighlight | null,
  *   tip: (name: string) => string | undefined,
  *   isAncestor: (a: string, b: string) => boolean,
  *   ahead: (branch: string, base: string) => number,
  *   mergeCommits: () => Commit[],
+ *   mergeBaseOf: (a: string, b: string) => string | undefined,
  * }} SimState
  * @typedef {{ text: string, check: (s: SimState) => boolean }} SimTask
  * @typedef {{ setup?: string[], tasks?: SimTask[], title?: string }} SimOptions
@@ -63,6 +71,9 @@
       upstream: {},
       commits: [],
       history: [],
+      // marks left by the last `git merge-base` / `git diff`, so tasks and tests can read them
+      mergeBase: null,
+      highlight: null,
       tip(name) { return s.branches[name]; },
       isAncestor(a, b) {
         // true if commit a is reachable from commit b (or equal)
@@ -85,6 +96,13 @@
         return reachable(t).filter((id) => !reachable(b).includes(id)).length;
       },
       mergeCommits() { return s.commits.filter((c) => c.parents.length > 1); },
+      mergeBaseOf(a, b) {
+        // best common ancestor: a common ancestor that is not an ancestor of another one
+        const inB = reachable(b);
+        const common = reachable(a).filter((id) => inB.includes(id));
+        const best = common.filter((id) => !common.some((other) => other !== id && s.isAncestor(id, other)));
+        return s.commits.filter((c) => best.includes(c.id)).pop()?.id;
+      },
     };
     /** @param {string} id */
     function byId(id) { return s.commits.find((c) => c.id === id); }
@@ -113,7 +131,7 @@
     const t = tokenize(line);
     if (t.length === 0) return { out: "" };
     if (t[0] === "help") {
-      return { out: "Try: git commit -m \"msg\" · git branch NAME · git switch NAME · git switch -c NAME\n     git merge NAME · git branch -d NAME · git log --oneline · git status · git push -u origin NAME" };
+      return { out: "Try: git commit -m \"msg\" · git branch NAME · git switch NAME · git switch -c NAME\n     git merge NAME · git branch -d NAME · git log --oneline · git status · git push -u origin NAME\n     git merge-base A B · git diff A...B · git diff A..B (no files here, so a diff highlights commits)" };
     }
     if (t[0] !== "git") return { out: `${t[0]}: command not found in this simulator (try 'help')`, err: true };
     const sub = t[1];
@@ -122,7 +140,13 @@
     const names = args.filter((a, i) => !a.startsWith("-") && !(args[i - 1] === "-m"));
     const validName = (/** @type {string} */ n) => /^[A-Za-z0-9._\/-]+$/.test(n) && !n.startsWith("-");
 
+    // "HEAD", a local branch, or origin/NAME -> commit id
+    const resolve = (/** @type {string} */ name) =>
+      name === "HEAD" ? s.branches[s.head] : name.startsWith("origin/") ? s.remotes[name.slice(7)] : s.branches[name];
+    const clearMarks = () => { s.mergeBase = null; s.highlight = null; };
+
     const newCommit = (/** @type {string} */ msg, /** @type {string[]} */ parents) => {
+      clearMarks();
       const n = s.commits.length + 1;
       /** @type {Commit} */
       const c = { id: fakeHash(n), parents, msg, born: s.head, n };
@@ -171,6 +195,7 @@
           if (flags.includes("-d") && !s.isAncestor(tip, s.branches[s.head])) {
             return { out: `error: the branch '${name}' is not fully merged\nhint: If you are sure you want to delete it, run 'git branch -D ${name}'`, err: true };
           }
+          clearMarks();
           delete s.branches[name];
           delete s.upstream[name];
           return { out: `Deleted branch ${name} (was ${tip}).` };
@@ -195,6 +220,7 @@
         const ours = s.branches[s.head];
         if (s.isAncestor(theirs, ours)) return { out: "Already up to date." };
         if (s.isAncestor(ours, theirs) && !flags.includes("--no-ff")) {
+          clearMarks();
           s.branches[s.head] = theirs;
           return { out: `Updating ${ours}..${theirs}\nFast-forward` };
         }
@@ -246,6 +272,45 @@
         if (setUp) { s.upstream[target] = target; out += `\nbranch '${target}' set up to track 'origin/${target}'.`; }
         return { out };
       }
+      case "merge-base": {
+        if (names.length !== 2) return { out: "usage: git merge-base A B", err: true };
+        const [a, b] = names.map(resolve);
+        const missing = !a ? names[0] : !b ? names[1] : undefined;
+        if (missing !== undefined) return { out: `fatal: Not a valid object name ${missing}`, err: true };
+        const base = s.mergeBaseOf(a, b);
+        if (!base) return { out: "", err: true };
+        s.mergeBase = base;
+        s.highlight = null;
+        return { out: base };
+      }
+      case "diff": {
+        // A..B and "A B" compare the two tips; A...B compares the merge base with B's tip
+        const m = names.length === 2 ? [names[0], "..", names[1]] : /^(.*?)(\.\.\.?)(.*)$/.exec(names[0] ?? "")?.slice(1);
+        if (!m || names.length > 2) {
+          return { out: "git diff: this simulator has no files, so it only compares branches.\nTry: git diff main...NAME (three dots) or git diff main..NAME (two dots)", err: true };
+        }
+        const from = m[0] || "HEAD", to = m[2] || "HEAD";
+        const form = m[1] === "..." ? "..." : "..";
+        const a = resolve(from), b = resolve(to);
+        if (!a || !b) {
+          return { out: `fatal: ambiguous argument '${names.join(" ")}': unknown revision or path not in the working tree.`, err: true };
+        }
+        const base = s.mergeBaseOf(a, b);
+        const only = (/** @type {string} */ tip, /** @type {string} */ other) =>
+          s.commits.filter((c) => s.isAncestor(c.id, tip) && !s.isAncestor(c.id, other)).map((c) => c.id);
+        const added = only(b, a);
+        const reversed = form === ".." ? only(a, b) : [];
+        s.mergeBase = base ?? null;
+        s.highlight = { form, from, to, added, reversed };
+        const count = (/** @type {string[]} */ ids) => `${ids.length} commit${ids.length === 1 ? "" : "s"}`;
+        const lines = [form === "..."
+          ? `${from}...${to}: from the merge base ${base ?? "(none)"} to the tip of ${to}`
+          : `${from}..${to}: from the tip of ${from} to the tip of ${to}`];
+        if (added.length) lines.push(`  + ${count(added)} only on ${to}: ${added.join(" ")}`);
+        if (reversed.length) lines.push(`  - ${count(reversed)} only on ${from}, shown reversed: ${reversed.join(" ")}`);
+        if (!added.length && !reversed.length) lines.push("  no differences");
+        return { out: lines.join("\n") };
+      }
       default:
         return { out: `git ${sub ?? ""}: not supported in this simulator (try 'help')`, err: true };
     }
@@ -276,7 +341,13 @@
     const width = Math.max(320, x0 + s.commits.length * dx + 60);
     const height = y0 + laneOrder.length * laneH;
     const svg = /** @type {SVGSVGElement} */ (/** @type {unknown} */ (svgEl("svg", { viewBox: `0 0 ${width} ${height}`, width, height, role: "img" })));
-    svg.setAttribute("aria-label", `Commit graph with ${s.commits.length} commits; HEAD is on ${s.head}`);
+    let aria = `Commit graph with ${s.commits.length} commits; HEAD is on ${s.head}`;
+    if (s.mergeBase) aria += `; merge base marked at ${s.mergeBase}`;
+    if (s.highlight) {
+      aria += `; ${s.highlight.from}${s.highlight.form}${s.highlight.to} covers ${s.highlight.added.length} commits`;
+      if (s.highlight.reversed.length) aria += ` plus ${s.highlight.reversed.length} reversed`;
+    }
+    svg.setAttribute("aria-label", aria);
 
     /** @type {Record<string, {x: number, y: number, lane: number}>} */
     const pos = {};
@@ -304,6 +375,23 @@
         svg.appendChild(svgEl("path", { d, class: cls, fill: "none", "stroke-width": 3 }));
       });
     }
+    // marks from the last merge-base / diff: diff marks go under the nodes, the merge base square on top
+    const mark = (/** @type {string} */ id, /** @type {string} */ cls, /** @type {string} */ text) => {
+      const p = pos[id];
+      if (!p) return;
+      const shape = cls === "mark-base"
+        ? svgEl("rect", { x: p.x - 13, y: p.y - 13, width: 26, height: 26, class: cls })
+        : svgEl("circle", { cx: p.x, cy: p.y, r: 15, class: cls });
+      const title = svgEl("title", {});
+      title.textContent = text;
+      shape.appendChild(title);
+      svg.appendChild(shape);
+    };
+    if (s.highlight) {
+      const h = s.highlight;
+      h.added.forEach((id) => mark(id, "mark-added", `${id}: its changes are in ${h.from}${h.form}${h.to}`));
+      h.reversed.forEach((id) => mark(id, "mark-reversed", `${id}: its changes show reversed in ${h.from}${h.form}${h.to}`));
+    }
     // nodes + labels
     const headTip = s.branches[s.head];
     for (const c of s.commits) {
@@ -329,6 +417,7 @@
         svg.appendChild(t);
       });
     }
+    if (s.mergeBase) mark(s.mergeBase, "mark-base", `${s.mergeBase}: merge base`);
     return svg;
   }
 
@@ -385,6 +474,23 @@
     function paint() {
       graph.innerHTML = "";
       graph.appendChild(render(s));
+      /** @type {[string, string][]} */
+      const keys = [];
+      if (s.mergeBase) keys.push(["base", "merge base"]);
+      if (s.highlight?.added.length) keys.push(["added", "changes in the diff"]);
+      if (s.highlight?.reversed.length) keys.push(["reversed", "changes in the diff, reversed"]);
+      if (keys.length) {
+        const legend = document.createElement("p");
+        legend.className = "sim-legend";
+        for (const [cls, text] of keys) {
+          const item = document.createElement("span");
+          const swatch = document.createElement("i");
+          swatch.className = "key-" + cls;
+          item.append(swatch, " " + text);
+          legend.appendChild(item);
+        }
+        graph.appendChild(legend);
+      }
       prompt.textContent = `(${s.head}) $`;
       list.innerHTML = "";
       tasks.forEach((task, i) => {
