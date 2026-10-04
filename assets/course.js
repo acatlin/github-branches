@@ -1,10 +1,11 @@
 // @ts-check
 /**
- * Course chrome: light/dark theme toggle (remembered per browser) and
- * persistent checkboxes for real-world step lists.
+ * Course chrome: light/dark theme toggle (remembered per browser),
+ * persistent checkboxes for real-world step lists, and copy-to-clipboard buttons.
  *
  * Markup: <button class="theme-toggle" type="button">Theme</button>
  *         <ol class="steps" data-key="lesson3"><li><label><input type="checkbox"> …</label></li></ol>
+ *         <button class="copy" type="button" data-target="ID">Copy</button> copies #ID's text
  */
 (function () {
   const root = document.documentElement;
@@ -28,6 +29,19 @@
         : window.matchMedia("(prefers-color-scheme: dark)").matches;
       root.dataset.theme = dark ? "light" : "dark";
       save("gb-theme", root.dataset.theme);
+    });
+  });
+
+  document.querySelectorAll("button.copy[data-target]").forEach((el) => {
+    const btn = /** @type {HTMLButtonElement} */ (el);
+    btn.addEventListener("click", () => {
+      const source = document.getElementById(btn.dataset.target || "");
+      if (!source) return;
+      const label = btn.textContent;
+      navigator.clipboard.writeText(source.textContent || "").then(
+        () => { btn.textContent = "Copied"; },
+        () => { btn.textContent = "Copy failed: select the text instead"; },
+      ).finally(() => setTimeout(() => { btn.textContent = label; }, 2000));
     });
   });
 
