@@ -42,4 +42,4 @@ Verified fact sheet with quotes and deep links: [research/facts.md](research/fac
 ## Gaps
 
 - Fowler's exact definitions of Continuous Delivery vs Deployment were only paraphrased — quote GitHub's CD doc instead.
-- `gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow` assembled from docs; verified when this repo was published.
+- ~~`gh api` Pages command unverified~~ — verified 2026-10-04: `gh api -X POST "repos/acatlin/github-branches/pages" -f build_type=workflow` returned build_type `workflow`.

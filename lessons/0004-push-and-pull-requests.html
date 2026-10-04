@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Push and Pull Requests</title>
+<meta name="description" content="Lesson 4: publish a branch to GitHub, open a pull request, choose a merge method, and clean up — the GitHub flow.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 4 of 9 · about 15 minutes</p>
+<h1>Push and pull requests</h1>
+<p class="subtitle">Your branch leaves your laptop, gets a review page, and lands on <code>main</code> in one clean commit.</p>
+
+<div class="win">You will push a branch to GitHub, open a pull request from the terminal, squash-merge it, and leave both your laptop and GitHub tidy.</div>
+
+<h2>Two copies, one name: <code>origin</code></h2>
+<p>So far every branch has lived only on your laptop. GitHub holds another copy of the repository, called a <a href="../reference/glossary.html#remote-term">remote</a>. <code>origin</code> isn't a special word. It "is the default name for a remote when you run <code>git clone</code>."<a class="cite" href="#s1">1</a></p>
+<p>Git keeps a read-only bookmark for each branch it has seen on the remote, such as <code>origin/main</code>. These <a href="../reference/glossary.html#remote-tracking-branch">remote-tracking branches</a> are "local references that you can't move; Git moves them for you whenever you do any network communication."<a class="cite" href="#s1">1</a> They tell you where GitHub's branches were the last time you pushed or fetched.</p>
+
+<h3>Publishing a branch: <code>push -u</code></h3>
+<p>A new branch doesn't exist on GitHub until you push it. The first push should set its <a href="../reference/glossary.html#upstream">upstream</a>:</p>
+<pre><code><span class="p">$ </span>git push -u origin add-tests   <span class="c"># create add-tests on GitHub and link to it</span>
+<span class="p">$ </span>git push                       <span class="c"># every later push: no arguments needed</span></code></pre>
+<p>The <code>-u</code> (<code>--set-upstream</code>) flag adds an "upstream (tracking) reference, used by argument-less git-pull and other commands."<a class="cite" href="#s2">2</a> After that, <code>git status</code> tells you whether you are ahead of <code>origin/add-tests</code>, and plain <code>git push</code> and <code>git pull</code> know where to go.</p>
+
+<h2>Try it: publish a branch in the simulator</h2>
+<p><code>main</code> has already been pushed. The italic <em>origin/…</em> labels show where GitHub thinks each branch is.</p>
+<div class="sim" id="sim4"></div>
+<p>Notice what happened at task 3: plain <code>git push</code> refused because the branch had no upstream yet. That error message is one you'll see for real. Its fix is always <code>git push -u origin &lt;branch&gt;</code>.</p>
+
+<h2>The pull request: a review page for a branch</h2>
+<p>"Pull requests are proposals to merge code changes into a project."<a class="cite" href="#s4">4</a> Every <a href="../reference/glossary.html#pull-request">pull request</a> has two ends:</p>
+<ul>
+  <li>the <strong>head branch</strong>, with your proposed changes (<code>add-tests</code>);</li>
+  <li>the <strong>base branch</strong>, which receives them (usually <code>main</code>).</li>
+</ul>
+<p>"A pull request compares the proposed changes on the head branch with the base branch," and GitHub shows a <a href="../reference/glossary.html#three-dot-diff">three-dot diff</a>: only what changed on your branch since it split from <code>main</code>.<a class="cite" href="#s3">3</a> That is the same view as <code>git diff main...add-tests</code> from Lesson 2.</p>
+<table>
+  <thead><tr><th>Tab</th><th>What you use it for</th></tr></thead>
+  <tbody>
+    <tr><td>Conversation</td><td>Description, review comments, the merge button</td></tr>
+    <tr><td>Commits</td><td>Each commit on the head branch</td></tr>
+    <tr><td>Checks</td><td>"Automated tests, builds, and other validations." This is CI, in Lesson 5.<a class="cite" href="#s4">4</a></td></tr>
+    <tr><td>Files changed</td><td>The line-by-line diff. Review every line here, especially an agent's.</td></tr>
+  </tbody>
+</table>
+<p>Not finished yet? Open a <a href="../reference/glossary.html#draft-pr">draft pull request</a>. "Draft pull requests cannot be merged," and they are "useful when you want to share work-in-progress without formally requesting reviews."<a class="cite" href="#s4">4</a></p>
+
+<h2>Choosing a merge method</h2>
+<p>GitHub offers three buttons.<a class="cite" href="#s5">5</a></p>
+<table>
+  <thead><tr><th>Method</th><th>What lands on <code>main</code></th></tr></thead>
+  <tbody>
+    <tr><td><strong>Merge commit</strong> (default)</td><td>All branch commits plus a merge commit; GitHub uses <code>--no-ff</code>.</td></tr>
+    <tr><td><strong>Squash and merge</strong></td><td>The branch's commits "squashed into a single commit."</td></tr>
+    <tr><td><strong>Rebase and merge</strong></td><td>Each commit re-applied individually, with new SHAs, no merge commit.</td></tr>
+  </tbody>
+</table>
+<p><strong>Our recommendation for agent branches: squash.</strong> GitHub suggests squash "when a pull request represents one logical change, especially if the branch includes many small fixup commits."<a class="cite" href="#s5">5</a> That describes a Claude Code session well: one task, many small commits. It comes with one rule:</p>
+<p class="warn">"Squash merging works best for short-lived branches. If you keep working on the same head branch after a squash merge, later pull requests can include commits that were already squashed into the base branch."<a class="cite" href="#s5">5</a> After a squash merge, delete the branch and start the next task on a fresh one.</p>
+
+<h3>Link the issue</h3>
+<p>Put <code>Closes #12</code> in the PR description and issue #12 closes automatically on merge. But keywords only work when the PR targets the default branch: "If the pull request targets <em>any other branch</em>, then these keywords are ignored."<a class="cite" href="#s7">7</a></p>
+
+<h2>Do it for real in <code>penguins-lab</code></h2>
+<p>Work in the practice repository from Lessons 2–3. Its <code>main</code> already contains <code>clean.py</code> with <code>drop_missing(df, cols)</code>. Tick each step as you go. Your progress is saved in this browser.</p>
+<ol class="steps" data-key="l4">
+  <li><label><input type="checkbox"> Start from an up-to-date <code>main</code>, then branch.</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull
+<span class="p">$ </span>git switch -c add-tests</code></pre></li>
+  <li><label><input type="checkbox"> Create <code>test_clean.py</code> with this test:</label>
+<pre><code>import pandas as pd
+from clean import drop_missing
+
+def test_drop_missing_removes_nan_rows():
+    df = pd.DataFrame({"bill_length_mm": [39.1, None, 40.3], "species": ["Adelie"] * 3})
+    out = drop_missing(df, ["bill_length_mm"])
+    assert len(out) == 2</code></pre>
+  If you have pandas and pytest installed, run <code>python -m pytest -q</code> and expect <code>1 passed</code>.</li>
+  <li><label><input type="checkbox"> Commit and publish the branch.</label>
+<pre><code><span class="p">$ </span>git add test_clean.py
+<span class="p">$ </span>git commit -m "Add test for drop_missing"
+<span class="p">$ </span>git push -u origin add-tests</code></pre></li>
+  <li><label><input type="checkbox"> Open the pull request from the terminal.</label>
+<pre><code><span class="p">$ </span>gh pr create --fill          <span class="c"># title and body from your commit</span>
+<span class="p">$ </span>gh pr view --web             <span class="c"># open it in the browser</span></code></pre>
+  <code>--fill</code> uses "commit info for title and body"; add <code>--draft</code> to open it as a draft.<a class="cite" href="#s6">6</a> Click through the four tabs. On <em>Files changed</em>, confirm you see only <code>test_clean.py</code>: that's the three-dot diff.</li>
+  <li><label><input type="checkbox"> Squash-merge and delete the branch (local and on GitHub).</label>
+<pre><code><span class="p">$ </span>gh pr merge --squash --delete-branch</code></pre></li>
+  <li><label><input type="checkbox"> Bring your laptop's <code>main</code> up to date and check the result.</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull
+<span class="p">$ </span>git log --oneline -3</code></pre>
+  You should see one new commit for the whole PR, and <code>git branch</code> should no longer list <code>add-tests</code>.</li>
+</ol>
+<p class="note">Want GitHub to always tidy up for you? Settings → General → Pull Requests → <strong>Automatically delete head branches</strong> (needs admin rights).<a class="cite" href="#s8">8</a></p>
+
+<h2>You just did GitHub flow</h2>
+<p>GitHub calls this "a lightweight, branch-based workflow," and its six steps are exactly what you did:<a class="cite" href="#s9">9</a></p>
+<ol>
+  <li>Create a branch</li>
+  <li>Make changes</li>
+  <li>Create a pull request</li>
+  <li>Address review comments</li>
+  <li>Merge your pull request</li>
+  <li>Delete your branch</li>
+</ol>
+<p>Every Claude Code task in Lessons 6–9 follows this same loop. The only change is who makes the commits in step 2.</p>
+
+<h2>Check yourself</h2>
+<p>Type each command from memory.</p>
+<div class="drill" data-accept="git push -u origin add-tests || git push --set-upstream origin add-tests">
+  <p class="prompt">Publish the new local branch <code>add-tests</code> to GitHub and set its upstream.</p>
+</div>
+<div class="drill" data-accept="gh pr create --fill || gh pr create -f">
+  <p class="prompt">Open a pull request for the current branch, taking the title and body from your commits.</p>
+</div>
+<div class="drill" data-accept="gh pr merge --squash --delete-branch || gh pr merge -s -d || gh pr merge --delete-branch --squash || gh pr merge -d -s">
+  <p class="prompt">Squash-merge the current branch's pull request and delete the branch locally and on GitHub.</p>
+</div>
+
+<div class="quiz">
+  <p class="q">What is <code>origin/main</code> on your laptop?</p>
+  <ul class="opts">
+    <li data-correct>A bookmark of GitHub's main</li>
+    <li>A second branch you edit</li>
+    <li>The branch HEAD names now</li>
+    <li>A backup Git makes nightly</li>
+  </ul>
+  <p class="why">It's a remote-tracking branch: a read-only pointer to where <code>main</code> was on the remote when you last pushed or fetched.</p>
+</div>
+<div class="quiz">
+  <p class="q">In a pull request from <code>add-tests</code> into <code>main</code>, which is the base branch?</p>
+  <ul class="opts">
+    <li data-correct>main, which receives the changes</li>
+    <li>add-tests, which holds the changes</li>
+    <li>origin, which stores both branches</li>
+    <li>HEAD, which marks the merge</li>
+  </ul>
+  <p class="why">The head branch proposes changes; the base branch receives them.</p>
+</div>
+<div class="quiz">
+  <p class="q">You squash-merged <code>clean-dates</code>. What should you do next?</p>
+  <ul class="opts">
+    <li data-correct>Delete it; start fresh next time</li>
+    <li>Keep committing on it for later</li>
+    <li>Merge main into it every day</li>
+    <li>Rename it so nobody reuses it</li>
+  </ul>
+  <p class="why">GitHub warns that continuing on a squashed head branch makes later PRs re-include commits already squashed into the base. Short-lived branches, deleted after merge.</p>
+</div>
+<div class="quiz">
+  <p class="q">Your PR targets <code>dev</code>, not <code>main</code>, and says <code>Closes #12</code>. What happens on merge?</p>
+  <ul class="opts">
+    <li data-correct>Nothing; issue twelve stays open</li>
+    <li>Issue twelve closes right away</li>
+    <li>GitHub blocks the merge entirely</li>
+    <li>The issue moves to dev</li>
+  </ul>
+  <p class="why">Closing keywords only work when the PR targets the default branch; otherwise "these keywords are ignored."</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<div class="primary-source">
+  Read GitHub's <a href="https://docs.github.com/en/get-started/using-github/github-flow">GitHub flow</a> (5 minutes). It's the workflow behind the rest of the course. Then skim <a href="https://docs.github.com/en/pull-requests/reference/pull-request-merges">About pull request merges</a> for the details of each merge button.
+</div>
+
+<div class="ask-agent">
+  Anything fuzzy? Ask Claude: <em>"Show me what <code>git branch -vv</code> prints in my penguins-lab repo and explain each column,"</em> or <em>"When would I choose a merge commit over squash and merge?"</em>
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Chacon &amp; Straub, <a href="https://git-scm.com/book/en/v2/Git-Branching-Remote-Branches"><em>Pro Git</em>, §3.5 Remote Branches</a>.</li>
+    <li id="s2">Git reference, <a href="https://git-scm.com/docs/git-push#Documentation/git-push.txt---set-upstream">git-push --set-upstream</a>.</li>
+    <li id="s3">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/branches#comparing-branches-in-pull-requests">Branches: comparing branches in pull requests</a>.</li>
+    <li id="s4">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/pull-requests">Pull requests</a> (tabs; draft pull requests).</li>
+    <li id="s5">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/pull-request-merges">About pull request merges</a>.</li>
+    <li id="s6">GitHub CLI manual, <a href="https://cli.github.com/manual/gh_pr_create">gh pr create</a> and <a href="https://cli.github.com/manual/gh_pr_merge">gh pr merge</a>.</li>
+    <li id="s7">GitHub Docs, <a href="https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue">Linking a pull request to an issue</a>.</li>
+    <li id="s8">GitHub Docs, <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches">Managing the automatic deletion of branches</a>.</li>
+    <li id="s9">GitHub Docs, <a href="https://docs.github.com/en/get-started/using-github/github-flow">GitHub flow</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0003-merge-and-clean-up.html">← Lesson 3: Merge and clean up</a>
+  <a href="0005-ci-cd-and-branches.html">Lesson 5: CI/CD and branches →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+<script src="../assets/branch-sim.js"></script>
+<script>
+  BranchSim.mount(document.getElementById("sim4"), {
+    setup: ["git commit -m 'initial README'", "git commit -m 'add drop_missing'", "git push -u origin main"],
+    tasks: [
+      { text: "Create and switch to <code>add-tests</code> in one command.", check: (s) => s.head === "add-tests" },
+      { text: "Commit the test (<code>git commit -m \"add test\"</code>).", check: (s) => s.ahead("add-tests", "main") >= 1 },
+      { text: "Try a plain <code>git push</code> and read the error.", check: (s) => s.history.some((h) => /^git push\s*$/.test(h.trim())) },
+      { text: "Publish the branch with <code>git push -u origin add-tests</code>.", check: (s) => s.upstream["add-tests"] === "add-tests" && !!s.remotes["add-tests"] },
+      { text: "Commit once more, run <code>git status</code>, then a plain <code>git push</code>.", check: (s) => s.ahead("add-tests", "main") >= 2 && s.remotes["add-tests"] === s.branches["add-tests"] },
+    ],
+  });
+</script>
+</body>
+</html>

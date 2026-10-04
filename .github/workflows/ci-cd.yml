@@ -1,0 +1,59 @@
+# CI on every pull request to main; CD (GitHub Pages) only after CI passes on main.
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Validate site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate HTML
+        run: npx -y html-validate@9 index.html lessons/*.html reference/*.html
+      - name: Type-check JavaScript components
+        run: npx -y -p typescript@5 tsc --noEmit --allowJs --checkJs --strict --target es2022 --lib es2022,dom,dom.iterable assets/*.js
+      - name: Unit-test the branch simulator
+        run: node --test tests/branch-sim.test.mjs
+      - name: Check quiz options give no length clues
+        run: node tests/check-quizzes.mjs
+      - name: Check internal links
+        run: node tests/check-links.mjs
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - name: Assemble site
+        run: mkdir _site && cp -r index.html lessons reference assets _site/
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5

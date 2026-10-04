@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notebooks and Branches</title>
+<meta name="description" content="Lesson 8: why Jupyter notebooks make branch diffs and merge conflicts painful, and how nbdime and Jupytext fix it.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 8 of 9 · about 12 minutes</p>
+<h1>Notebooks and branches</h1>
+<p class="subtitle">Your notebook is a JSON file in disguise. Teach Git to see the code inside it.</p>
+
+<div class="win">You will set up <code>penguins-lab</code> so that a notebook change on a <a href="../reference/glossary.html#feature-branch">feature branch</a> shows up as a readable diff, and you'll know how to keep notebook merge conflicts rare.</div>
+
+<h2>Why notebooks fight with branches</h2>
+<p>A <code>.ipynb</code> file is not a script. Its format "is defined with this JSON schema," and every code cell stores "a list of outputs associated with executing that code" plus an <code>execution_count</code>.<a class="cite" href="#s1">1</a> Here's a trimmed example of one cell:</p>
+<pre><code>{
+  "cell_type": "code",
+  "execution_count": 7,
+  "source": ["df = drop_missing(df, [\"bill_length_mm\"])\n", "df.shape"],
+  "outputs": [
+    { "output_type": "execute_result", "execution_count": 7,
+      "data": { "text/plain": ["(342, 8)"] } }
+  ]
+}</code></pre>
+<p>Re-run that cell and <code>execution_count</code> and <code>outputs</code> change, even if you never touched the code. Plots are stored inside outputs as base64-encoded image data,<a class="cite" href="#s1">1</a> so a re-run plot rewrites a large block of the file. Three things follow:</p>
+<ul>
+  <li><strong>Noisy diffs.</strong> <code>git diff main...add-plot</code> shows JSON churn instead of the one line of pandas that changed. That's the three-dot diff from Lesson 2, and it's the same diff a pull request shows.</li>
+  <li><strong>Painful merge conflicts.</strong> Two branches that both re-ran the notebook have both changed the same lines, which is the textbook cause of a <a href="../reference/glossary.html#merge-conflict">merge conflict</a>.<a class="cite" href="#s2">2</a> Conflict markers dropped into JSON can leave a file Jupyter won't open.</li>
+  <li><strong>Agents make it worse.</strong> If Claude Code executes a notebook while it works on an <a href="../reference/glossary.html#agent-branch">agent branch</a>, every executed cell gets new counts and outputs. A small logic change turns into a big diff for you to review.</li>
+</ul>
+<p>The nbdime project says it plainly: "primitive line-based diff and merge tools do not handle well the logical structure of notebook documents."<a class="cite" href="#s3">3</a></p>
+
+<h2>Fix 1 — nbdime: notebook-aware diff and merge</h2>
+<p>nbdime "provides tools for diffing and merging of Jupyter Notebooks."<a class="cite" href="#s3">3</a> Once you register it with Git, <code>git diff</code> gives "the standard diff for any non-notebook files, but use[s] nbdime's command-line diff for all <code>.ipynb</code> files," and "Nbdime will also be used for all merges on notebook files."<a class="cite" href="#s4">4</a></p>
+<pre><code><span class="p">$ </span>pip install nbdime
+<span class="p">$ </span>nbdime config-git --enable        <span class="c"># this repository only; add --global for all repos</span>
+<span class="p">$ </span>git diff main...add-plot          <span class="c"># notebooks now diff cell by cell</span>
+<span class="p">$ </span>nbdiff-web                        <span class="c"># rich side-by-side diff in the browser</span>
+<span class="p">$ </span>git mergetool --tool nbdime -- *.ipynb   <span class="c"># resolve a notebook conflict visually</span></code></pre>
+<p class="note">The setup writes a <code>.gitattributes</code> entry (<code>*.ipynb diff=jupyternotebook</code>).<a class="cite" href="#s4">4</a> Commit that file so everyone who clones the repo, including CI, uses the same rule. Not every command uses the driver: "git add --patch will not use the driver."<a class="cite" href="#s4">4</a></p>
+
+<h2>Fix 2 — Jupytext: version the code, not the JSON</h2>
+<p>Jupytext asks: "Have you always wished Jupyter notebooks were plain text documents?… And get clear and meaningful diffs when doing version control?"<a class="cite" href="#s5">5</a> It pairs your notebook with a <code>py:percent</code> script that stores "Only the notebook inputs (and optionally, the metadata)." Such text notebooks "are well suited for version control."<a class="cite" href="#s5">5</a></p>
+<pre><code><span class="p">$ </span>pip install jupytext
+<span class="p">$ </span>jupytext --set-formats ipynb,py:percent analysis.ipynb   <span class="c"># creates analysis.py, paired</span>
+<span class="p">$ </span>jupytext --sync analysis.py                              <span class="c"># bring the pair back in step</span></code></pre>
+<p>When a paired notebook opens, "the inputs are loaded from the most recent file in the pair, while the outputs are loaded from the <code>.ipynb</code> file."<a class="cite" href="#s6">6</a> So you can commit <code>analysis.py</code> and, as Jupytext suggests, "exclude <code>.ipynb</code> files from version control (unless you want to see the outputs versioned!)."<a class="cite" href="#s5">5</a> Your teammates' diff then "is nothing else than a standard diff on a Python script."<a class="cite" href="#s5">5</a> To pair every notebook in a project, put <code>formats = "ipynb,py:percent"</code> in a <code>jupytext.toml</code>.<a class="cite" href="#s5">5</a></p>
+
+<h2>Branch habits for data scientists</h2>
+<p>The tools help. These habits (course advice, built on the lessons so far) keep conflicts rare to begin with:</p>
+<ul>
+  <li><strong>Logic lives in <code>.py</code> modules.</strong> Keep functions like <code>drop_missing</code> in <code>clean.py</code>, where <code>test_clean.py</code> and CI (Lesson 5) can import and test them. The notebook only calls them.</li>
+  <li><strong>One owner per notebook per branch.</strong> If two branches must both change <code>analysis.ipynb</code>, merge one before starting the other. Short-lived branches (Lesson 5) make this easy.</li>
+  <li><strong>Point Claude at the paired script.</strong> Brief your agent with "edit <code>analysis.py</code>, not the <code>.ipynb</code>, and don't execute the notebook." Its diff stays a clean Python diff you can review in the PR.</li>
+</ul>
+
+<h2>Do it: make penguins-lab notebook-friendly</h2>
+<ol class="steps" data-key="l8">
+  <li><label><input type="checkbox"> In <code>penguins-lab</code>, start from an up-to-date <code>main</code>: <code>git switch main</code> then <code>git pull</code>.</label></li>
+  <li><label><input type="checkbox"> Create a branch: <code>git switch -c notebook-tooling</code>.</label></li>
+  <li><label><input type="checkbox"> Create <code>analysis.ipynb</code> in Jupyter with two cells: load the penguins CSV, then call <code>drop_missing</code> from <code>clean.py</code>. Run both cells and save.</label></li>
+  <li><label><input type="checkbox"> <code>pip install nbdime jupytext</code>, then <code>nbdime config-git --enable</code>.</label></li>
+  <li><label><input type="checkbox"> Pair it: <code>jupytext --set-formats ipynb,py:percent analysis.ipynb</code>. Open <code>analysis.py</code> to see your cells as plain Python.</label></li>
+  <li><label><input type="checkbox"> Commit <code>.gitattributes</code>, <code>analysis.py</code>, and (your choice) <code>analysis.ipynb</code>. Push with <code>git push -u origin notebook-tooling</code>.</label></li>
+  <li><label><input type="checkbox"> Change one line in the notebook, re-run every cell, save, and compare <code>git diff</code> with <code>git diff -- analysis.py</code>. Which would you rather review?</label></li>
+  <li><label><input type="checkbox"> Open a PR with <code>gh pr create --fill</code>, let CI go green, and squash-merge it.</label></li>
+</ol>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">You re-run a notebook without editing any code. Why does <code>git diff</code> still show changes?</p>
+  <ul class="opts">
+    <li data-correct>Outputs and execution counts are stored</li>
+    <li>Git rewrites notebooks on every switch</li>
+    <li>Jupyter adds the branch name inside</li>
+    <li>Notebook files are stored as binary</li>
+  </ul>
+  <p class="why">Code cells store their outputs and an <code>execution_count</code> in the JSON, so running a cell rewrites the file.</p>
+</div>
+<div class="quiz">
+  <p class="q">What does <code>nbdime config-git --enable</code> change?</p>
+  <ul class="opts">
+    <li data-correct>git diff and merge understand notebooks</li>
+    <li>notebooks are deleted from the repository</li>
+    <li>cell outputs are cleared on commit</li>
+    <li>pull requests open inside Jupyter automatically</li>
+  </ul>
+  <p class="why">It registers nbdime as Git's diff and merge driver for <code>.ipynb</code> files; other files still use the standard diff.</p>
+</div>
+<div class="quiz">
+  <p class="q">With Jupytext pairing, which file gives reviewers the cleanest diff?</p>
+  <ul class="opts">
+    <li data-correct>the paired py:percent script</li>
+    <li>the original ipynb notebook</li>
+    <li>the generated gitattributes file</li>
+    <li>the jupytext toml configuration</li>
+  </ul>
+  <p class="why">The <code>py:percent</code> file stores only the inputs, so its diff is a standard Python diff.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<div class="primary-source">
+  Read nbdime's <a href="https://nbdime.readthedocs.io/en/latest/vcs.html#git-integration">Git integration guide</a> (5 minutes), then skim the <a href="https://github.com/jupytext/jupytext#notebooks-under-version-control">Jupytext "Notebooks under version control"</a> section to choose between the two.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"Look at my repo's notebooks and suggest which logic should move into clean.py so it can be tested,"</em> or <em>"Walk me through resolving a conflict in analysis.ipynb with nbdime's mergetool."</em>
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">nbformat, <a href="https://nbformat.readthedocs.io/en/latest/format_description.html">The Notebook file format</a>.</li>
+    <li id="s2">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/about-merge-conflicts">About merge conflicts</a>.</li>
+    <li id="s3"><a href="https://nbdime.readthedocs.io/en/latest/">nbdime documentation</a> (overview).</li>
+    <li id="s4">nbdime, <a href="https://nbdime.readthedocs.io/en/latest/vcs.html#git-integration">Version control integration — Git</a>.</li>
+    <li id="s5"><a href="https://github.com/jupytext/jupytext#readme">Jupytext README</a> (text notebooks, command line, notebooks under version control).</li>
+    <li id="s6">Jupytext, <a href="https://jupytext.org/using/paired-notebooks/">Paired notebooks</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0007-parallel-sessions-with-worktrees.html">← Lesson 7: Parallel sessions</a>
+  <a href="0009-capstone-full-loop.html">Lesson 9: Capstone →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

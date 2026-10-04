@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create, Switch, Compare</title>
+<meta name="description" content="Lesson 2: create a branch in a real repository, switch between branches, and compare a branch against main.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 2 of 9 · about 15 minutes</p>
+<h1>Create, switch, compare</h1>
+<p class="subtitle">Five commands that let you move between branches without fear.</p>
+
+<div class="win">You will make a real repository, put new work on a <a href="../reference/glossary.html#feature-branch">feature branch</a>, hop back and forth between it and <code>main</code>, and see exactly what the branch changed.</div>
+
+<h2>The five commands</h2>
+<p>Lesson 1 happened in a simulator. This time you'll use your own terminal: Git Bash on Windows, or Terminal on macOS/Linux. Here is everything you need:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>git switch -c add-cleaning</code></td><td>Create a branch at your current commit <em>and</em> move <code>HEAD</code> onto it.<a class="cite" href="#s2">2</a></td></tr>
+    <tr><td><code>git switch main</code></td><td>Move to an existing branch. Your <a href="../reference/glossary.html#working-tree">working tree</a> is rewritten to match it.<a class="cite" href="#s2">2</a></td></tr>
+    <tr><td><code>git switch -</code></td><td>Jump back to the branch you were on before.<a class="cite" href="#s2">2</a></td></tr>
+    <tr><td><code>git branch -vv</code></td><td>List local branches with their latest commit. The <code>*</code> marks where <code>HEAD</code> is.<a class="cite" href="#s3">3</a></td></tr>
+    <tr><td><code>git log --oneline --graph --all</code></td><td>Draw every branch's history as a text graph.<a class="cite" href="#s4">4</a></td></tr>
+  </tbody>
+</table>
+</div>
+<p>The docs describe <code>git switch -c</code> as "the transactional equivalent of <code>git branch &lt;new-branch&gt;</code> and <code>git switch &lt;new-branch&gt;</code>". It is lesson 1's two steps in one.<a class="cite" href="#s2">2</a></p>
+<p class="note">Older tutorials (and Claude, sometimes) use <code>git checkout -b add-cleaning</code>. It does the same thing. <code>git switch</code> arrived in Git 2.23.<a class="cite" href="#s1">1</a> It was labelled experimental until Git 2.51 declared it "no longer experimental."<a class="cite" href="#s5">5</a> This course uses <code>switch</code> because it does one job: changing branches.</p>
+
+<h2>Do it: your practice repository</h2>
+<p>You'll keep using <code>penguins-lab</code> for the rest of the course, so set it up properly. Tick each step as you go. Your progress is saved in this browser.</p>
+<ol class="steps" data-key="l2">
+  <li><label><input type="checkbox"> Create the repo on GitHub and clone it (this uses the <code>gh</code> CLI you already logged in with):</label>
+<pre><code><span class="p">$ </span>gh repo create penguins-lab --public --clone --add-readme
+<span class="p">$ </span>cd penguins-lab</code></pre></li>
+  <li><label><input type="checkbox"> Create and move onto a feature branch:</label>
+<pre><code><span class="p">$ </span>git switch -c add-cleaning
+Switched to a new branch 'add-cleaning'</code></pre></li>
+  <li><label><input type="checkbox"> Create <code>clean.py</code> in your editor with this content:</label>
+<pre><code>import pandas as pd
+
+def drop_missing(df: pd.DataFrame, cols: list[str]) -&gt; pd.DataFrame:
+    """Return a copy of df without rows that have NaN in any of cols."""
+    return df.dropna(subset=cols).reset_index(drop=True)</code></pre></li>
+  <li><label><input type="checkbox"> Commit it. The commit lands on <code>add-cleaning</code>, not <code>main</code>:</label>
+<pre><code><span class="p">$ </span>git add clean.py
+<span class="p">$ </span>git commit -m "Add drop_missing cleaning function"
+[add-cleaning 3ef57a2] Add drop_missing cleaning function
+ 1 file changed, 5 insertions(+)</code></pre></li>
+  <li><label><input type="checkbox"> Ask Git where you are:</label>
+<pre><code><span class="p">$ </span>git branch -vv
+* add-cleaning 3ef57a2 Add drop_missing cleaning function
+  main         1d28f0e [origin/main] Initial commit
+<span class="p">$ </span>git status
+On branch add-cleaning</code></pre>
+    <p>Your hashes will differ. <code>main</code> shows <code>[origin/main]</code> because it is linked to GitHub. Lesson 4 explains that link.</p></li>
+  <li><label><input type="checkbox"> Switch to <code>main</code> and list the folder. <strong><code>clean.py</code> is gone.</strong> Switch back and it returns:</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>ls
+README.md
+<span class="p">$ </span>git switch -
+<span class="p">$ </span>ls
+README.md  clean.py</code></pre>
+    <p>Nothing was deleted. <code>main</code>'s commit simply doesn't contain <code>clean.py</code>, and switching makes your files match the branch's commit.<a class="cite" href="#s2">2</a></p></li>
+  <li><label><input type="checkbox"> Draw the graph:</label>
+<pre><code><span class="p">$ </span>git log --oneline --graph --all
+* 3ef57a2 (HEAD -&gt; add-cleaning) Add drop_missing cleaning function
+* 1d28f0e (origin/main, origin/HEAD, main) Initial commit</code></pre>
+    <p>Same picture as lesson 1: <code>add-cleaning</code> is one commit ahead of <code>main</code>.</p></li>
+  <li><label><input type="checkbox"> See only what the branch changed, with a <a href="../reference/glossary.html#three-dot-diff">three-dot diff</a>:</label>
+<pre><code><span class="p">$ </span>git diff main...add-cleaning
+diff --git a/clean.py b/clean.py
+new file mode 100644
+--- /dev/null
++++ b/clean.py
+@@ -0,0 +1,5 @@
++import pandas as pd
+...</code></pre>
+    <p><code>main...add-cleaning</code> (three dots) compares the branch with the commit where it split from <code>main</code>. You see the branch's own changes and nothing else.<a class="cite" href="#s6">6</a> GitHub pull requests use the same three-dot view.<a class="cite" href="#s7">7</a> Later, this is how you'll review everything an agent did on its branch.</p></li>
+</ol>
+<p>Leave <code>add-cleaning</code> unmerged. Lesson 3 brings it into <code>main</code>.</p>
+
+<div class="warn">You can switch with uncommitted edits. Git carries them along to the other branch, which surprises people. If switching would overwrite your changes, Git refuses: "The operation is aborted however if the operation leads to loss of local changes."<a class="cite" href="#s2">2</a> The simple habit is to commit before you switch.</div>
+<p class="note">On Windows you may see <code>LF will be replaced by CRLF</code> warnings. They are about line endings, and you can ignore them for this course.</p>
+
+<h2>Recall the commands</h2>
+<p>Type each command from memory. Don't scroll up. The effort of remembering is the point.</p>
+<div class="drill" data-accept="git switch -c add-cleaning || git checkout -b add-cleaning || git switch --create add-cleaning">
+  <p class="prompt">Create a branch called <code>add-cleaning</code> and move onto it, in one command.</p>
+</div>
+<div class="drill" data-accept="git switch main || git checkout main">
+  <p class="prompt">Move to the existing <code>main</code> branch.</p>
+</div>
+<div class="drill" data-accept="git switch - || git checkout -">
+  <p class="prompt">Jump back to whichever branch you were on before.</p>
+</div>
+<div class="drill" data-accept="git log --oneline --graph --all || git log --oneline --all --graph || git log --graph --oneline --all || git log --graph --all --oneline || git log --all --oneline --graph || git log --all --graph --oneline">
+  <p class="prompt">Show the history of <em>every</em> branch as a one-line-per-commit graph.</p>
+</div>
+<div class="drill" data-accept="git diff main...add-cleaning">
+  <p class="prompt">Show only the changes made on <code>add-cleaning</code> since it split from <code>main</code>.</p>
+</div>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">You run <code>git branch add-cleaning</code> (no <code>switch</code>). Where is <code>HEAD</code> now?</p>
+  <ul class="opts">
+    <li data-correct>Still on the previous branch</li>
+    <li>On the new add-cleaning branch</li>
+    <li>On no branch at all</li>
+    <li>On a detached HEAD commit</li>
+  </ul>
+  <p class="why"><code>git branch &lt;name&gt;</code> only creates the pointer. Pro Git: it "only <em>created</em> a new branch — it didn't switch to that branch."</p>
+</div>
+<div class="quiz">
+  <p class="q">After <code>git switch main</code>, <code>clean.py</code> disappears from your folder. Why?</p>
+  <ul class="opts">
+    <li data-correct>main's commit has no clean.py</li>
+    <li>Git deleted the file permanently</li>
+    <li>The branch was merged away</li>
+    <li>GitHub removed the file remotely</li>
+  </ul>
+  <p class="why">Switching updates the working tree to match the branch's commit. The file is safe in the <code>add-cleaning</code> commit.</p>
+</div>
+<div class="quiz">
+  <p class="q">What does <code>git diff main...add-cleaning</code> (three dots) show?</p>
+  <ul class="opts">
+    <li data-correct>Only changes made on add-cleaning</li>
+    <li>Only changes made on main</li>
+    <li>Every difference between both tips</li>
+    <li>Commits that exist on GitHub</li>
+  </ul>
+  <p class="why">Three dots diff the branch against its merge base with <code>main</code>, so changes that landed on <code>main</code> later don't clutter the view. That's exactly what a pull request shows.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<div class="primary-source">
+  Read the <a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell#_switching_branches">"Switching Branches" part of Pro Git §3.1</a>. It shows the working tree changing as <code>HEAD</code> moves, with diagrams. Then skim the <a href="https://git-scm.com/docs/git-switch">git switch reference</a> to see what else the command can do.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"I have uncommitted changes and want to switch branches. What are my options?"</em> or <em>"Explain the difference between <code>git diff main..add-cleaning</code> and <code>git diff main...add-cleaning</code> with a diagram."</em>
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Chacon &amp; Straub, <a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell#_switching_branches"><em>Pro Git</em>, §3.1 Switching Branches</a>.</li>
+    <li id="s2">Git reference, <a href="https://git-scm.com/docs/git-switch">git-switch</a>.</li>
+    <li id="s3">Git reference, <a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt--v">git-branch (-v, -vv)</a>.</li>
+    <li id="s4">Git reference, <a href="https://git-scm.com/docs/git-log#Documentation/git-log.txt---graph">git-log (--oneline, --graph, --all)</a>.</li>
+    <li id="s5">Git 2.51.0 <a href="https://github.com/git/git/blob/master/Documentation/RelNotes/2.51.0.adoc">release notes</a>.</li>
+    <li id="s6">Git reference, <a href="https://git-scm.com/docs/git-diff#Documentation/git-diff.txt-gitdiffoptionscommitcommit--path-1">git-diff (A...B)</a>.</li>
+    <li id="s7">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/branches#three-dot-and-two-dot-git-diff-comparisons">Three-dot and two-dot Git diff comparisons</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0001-what-is-a-branch.html">← Lesson 1: What is a branch?</a>
+  <a href="0003-merge-and-clean-up.html">Lesson 3: Merge and clean up →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+</body>
+</html>

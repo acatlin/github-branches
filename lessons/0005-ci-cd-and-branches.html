@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI/CD and Branches</title>
+<meta name="description" content="Lesson 5: continuous integration tests every pull request; continuous deployment publishes main. Add a pytest workflow to your repo and watch it go red and green.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 5 of 9 · about 15 minutes</p>
+<h1>CI/CD and branches</h1>
+<p class="subtitle">A robot reviewer that tests every branch before it reaches <code>main</code>, and a robot publisher that ships <code>main</code> when it changes.</p>
+
+<div class="win">You will add a GitHub Actions workflow that runs <code>pytest</code> on every pull request, see a pull request go red and then green, and understand how <code>main</code> becomes a deployment.</div>
+
+<h2>Why integrate continuously?</h2>
+<p>Martin Fowler's definition: "Continuous Integration is a software development practice where each member of a team merges their changes into a codebase together with their colleagues changes at least daily. Each of these integrations is verified by an automated build (including test) to detect integration errors as quickly as possible."<a class="cite" href="#s1">1</a> GitHub makes the same case: "Committing code more often detects errors sooner and reduces the amount of code a developer needs to debug."<a class="cite" href="#s2">2</a></p>
+<p>Two patterns from Fowler's branching essay give the vocabulary:<a class="cite" href="#s3">3</a></p>
+<ul>
+  <li><strong><a href="../reference/glossary.html#mainline">Mainline</a></strong>: "A single, shared, branch that acts as the current state of the product." For us, that's <code>main</code>.</li>
+  <li><strong>Healthy branch</strong>: "On each commit, perform automated checks, usually building and running tests, to ensure there are no defects on the branch."</li>
+</ul>
+<p>His key point about branches: "Frequent integration increases the frequency of merges but reduces their complexity and risk."<a class="cite" href="#s3">3</a> That's why the course keeps saying <em>short-lived</em> branches: a one-task branch merged within a day is easy to test and easy to merge.</p>
+
+<h2>How a workflow attaches to branches</h2>
+<p>A <a href="../reference/glossary.html#workflow">workflow</a> is a YAML file in <code>.github/workflows/</code>. This one is the minimal Python CI from GitHub's tutorial,<a class="cite" href="#s4">4</a> with the actions bumped to their current major versions (<code>checkout@v7</code>, <code>setup-python@v7</code>):<a class="cite" href="#s12">12</a></p>
+<pre><code><span class="c"># .github/workflows/ci.yml</span>
+name: CI
+on:
+  push:
+    branches: [main]          <span class="c"># run after anything lands on main</span>
+  pull_request:
+    branches: [main]          <span class="c"># run on every PR whose BASE is main</span>
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pytest</code></pre>
+<p>Three details trip people up:</p>
+<ul>
+  <li><strong>The <code>pull_request</code> filter matches the base branch,</strong> not your branch name. <code>branches: [main]</code> means "pull requests that target <code>main</code>."<a class="cite" href="#s5">5</a> Any feature branch you open a PR from is covered.</li>
+  <li><strong>CI tests the merged result.</strong> For a PR, the workflow checks out <code>refs/pull/N/merge</code>, a simulated merge of your branch into <code>main</code>. "Your CI tests run against the merged result, not just the head branch alone."<a class="cite" href="#s6">6</a> A green check means "this will still work after merging," not just "my branch works."</li>
+  <li><strong>Conflicts stop CI.</strong> "Workflows will not run on <code>pull_request</code> activity if the pull request has a merge conflict."<a class="cite" href="#s6">6</a> Fix the conflict first (Lesson 3).</li>
+</ul>
+<p>Each job reports a <a href="../reference/glossary.html#status-check">status check</a> that appears on the PR's Checks tab and next to the merge button.<a class="cite" href="#s7">7</a></p>
+
+<h2>Do it for real: red, then green</h2>
+<p>Back in <code>penguins-lab</code>. <code>main</code> now has <code>clean.py</code> and <code>test_clean.py</code> from Lesson 4.</p>
+<ol class="steps" data-key="l5">
+  <li><label><input type="checkbox"> Branch from an up-to-date <code>main</code>.</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull
+<span class="p">$ </span>git switch -c add-ci</code></pre></li>
+  <li><label><input type="checkbox"> Create <code>.github/workflows/ci.yml</code> (the YAML above) and a <code>requirements.txt</code> containing:</label>
+<pre><code>pandas
+pytest</code></pre></li>
+  <li><label><input type="checkbox"> Commit, push, open the PR, and watch the checks live.</label>
+<pre><code><span class="p">$ </span>git add .github requirements.txt
+<span class="p">$ </span>git commit -m "Add pytest CI workflow"
+<span class="p">$ </span>git push -u origin add-ci
+<span class="p">$ </span>gh pr create --fill
+<span class="p">$ </span>gh pr checks --watch</code></pre>
+  Wait for the <code>test</code> check to pass. It takes a minute or two.</li>
+  <li><label><input type="checkbox"> Break it on purpose. In <code>clean.py</code>, change the return line to forget the drop:</label>
+<pre><code>    return df.reset_index(drop=True)   <span class="c"># bug: no dropna</span></code></pre>
+<pre><code><span class="p">$ </span>git commit -am "Simulate a bad change"
+<span class="p">$ </span>git push
+<span class="p">$ </span>gh pr checks --watch</code></pre>
+  The check goes red. Open the PR in the browser (<code>gh pr view --web</code>) and find <code>assert 3 == 2</code> in the job log. This is exactly what CI does when an agent's change breaks something.</li>
+  <li><label><input type="checkbox"> Fix it, push, and watch it go green again.</label>
+<pre><code><span class="p">$ </span>git restore --source=HEAD~1 clean.py   <span class="c"># bring back the good version</span>
+<span class="p">$ </span>git commit -am "Restore dropna"
+<span class="p">$ </span>git push
+<span class="p">$ </span>gh pr checks --watch</code></pre></li>
+  <li><label><input type="checkbox"> Squash-merge and tidy up.</label>
+<pre><code><span class="p">$ </span>gh pr merge --squash --delete-branch
+<span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull</code></pre>
+  The <code>push: branches: [main]</code> trigger now runs CI once more on <code>main</code> itself. Check the repo's Actions tab.</li>
+</ol>
+
+<h2>Making green mandatory: branch protection</h2>
+<p>Right now a red PR can still be merged. <a href="../reference/glossary.html#branch-protection">Branch protection</a> closes that gap. With "require status checks before merging," required checks "must have a <code>successful</code>, <code>skipped</code>, or <code>neutral</code> status before collaborators can make changes to a protected branch."<a class="cite" href="#s8">8</a> You can also require approving reviews, so changes reach <code>main</code> only "via a pull request that is approved by the required number of reviewers."<a class="cite" href="#s8">8</a> Newer repositories can do the same with <strong>rulesets</strong>, "a named list of rules" that can stack on one branch.<a class="cite" href="#s9">9</a></p>
+<p class="warn">On GitHub Free, protected branches and rulesets work in <strong>public</strong> repositories only.<a class="cite" href="#s8">8</a><a class="cite" href="#s9">9</a> A private student repo on Free can't enforce them, so you have to enforce the habit yourself: never merge on red.</p>
+<p class="note">One gotcha: if a <em>required</em> check's workflow is skipped by a branch or path filter, its check stays "Pending," and the PR "will be blocked from merging."<a class="cite" href="#s5">5</a> Keep the triggers of required workflows broad.</p>
+
+<h2>The CD half: deploying from main</h2>
+<p>GitHub's definition: "<em>Continuous deployment</em> (CD) is the practice of using automation to publish and deploy software updates. As part of the typical CD process, the code is automatically built and tested before deployment." A CD workflow often runs "when new code is pushed to the default branch."<a class="cite" href="#s10">10</a></p>
+<figure>
+  <svg viewBox="0 0 600 150" role="img" aria-label="Flow: work on a feature branch, open a pull request where CI runs tests, merge into main, and a deploy workflow publishes the site.">
+    <rect x="10" y="40" width="120" height="56" rx="6" class="surface-fill feat-line" stroke-width="2"/>
+    <text x="70" y="64" text-anchor="middle" class="label">feature branch</text>
+    <text x="70" y="82" text-anchor="middle" class="muted-fill">you / Claude</text>
+    <rect x="165" y="40" width="130" height="56" rx="6" class="surface-fill ink-line" stroke-width="2"/>
+    <text x="230" y="64" text-anchor="middle" class="label">pull request</text>
+    <text x="230" y="82" text-anchor="middle" class="muted-fill">CI: pytest ✓</text>
+    <rect x="330" y="40" width="110" height="56" rx="6" class="surface-fill main-line" stroke-width="2"/>
+    <text x="385" y="64" text-anchor="middle" class="label">main</text>
+    <text x="385" y="82" text-anchor="middle" class="muted-fill">merge</text>
+    <rect x="475" y="40" width="115" height="56" rx="6" class="surface-fill ink-line" stroke-width="2"/>
+    <text x="532" y="64" text-anchor="middle" class="label">deploy (CD)</text>
+    <text x="532" y="82" text-anchor="middle" class="muted-fill">GitHub Pages</text>
+    <line x1="130" y1="68" x2="160" y2="68" class="ink-line" stroke-width="2"/>
+    <polygon points="160,63 166,68 160,73" class="ink-fill"/>
+    <line x1="295" y1="68" x2="325" y2="68" class="ink-line" stroke-width="2"/>
+    <polygon points="325,63 331,68 325,73" class="ink-fill"/>
+    <line x1="440" y1="68" x2="470" y2="68" class="ink-line" stroke-width="2"/>
+    <polygon points="470,63 476,68 470,73" class="ink-fill"/>
+    <text x="230" y="125" text-anchor="middle" class="muted-fill">on: pull_request</text>
+    <text x="532" y="125" text-anchor="middle" class="muted-fill">on: push to main</text>
+  </svg>
+  <figcaption>CI guards the door to <code>main</code>; CD ships whatever is on <code>main</code>. Branches are where the risky work happens.</figcaption>
+</figure>
+<p>The site you're reading is deployed this way. Here is a trimmed version of its Pages workflow (the full files are in the <a href="https://github.com/acatlin/github-branches/tree/main/.github/workflows">course repository</a>):</p>
+<pre><code>name: Deploy Pages
+on:
+  push:
+    branches: [main]          <span class="c"># only main deploys; PRs never do</span>
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write                <span class="c"># required by deploy-pages</span>
+  id-token: write             <span class="c"># required by deploy-pages</span>
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5</code></pre>
+<p>The deploy job "must have a minimum of <code>pages: write</code> and <code>id-token: write</code> permissions" and runs in the <code>github-pages</code> environment.<a class="cite" href="#s11">11</a> GitHub's Pages docs also note the deploy step "is skipped if the workflow was triggered by a pull request."<a class="cite" href="#s11">11</a> Branches stay previews of work; only <code>main</code> goes live.</p>
+
+<h2>Why this matters for agentic coding</h2>
+<p>When Claude Code pushes commits to an <a href="../reference/glossary.html#agent-branch">agent branch</a>, CI is a reviewer that never gets tired. It re-runs your tests on every push and puts a red or green mark on the PR before you have read a line. Your job shifts to reading the diff and the check results. The agent's job is to make the check green. In Lesson 6 you'll tell Claude to do exactly that.</p>
+
+<h2>Check yourself</h2>
+<div class="drill" data-accept="gh pr checks --watch">
+  <p class="prompt">Watch the current branch's pull request checks in the terminal until they finish.</p>
+</div>
+<div class="quiz">
+  <p class="q">A workflow has <code>on: pull_request: branches: [main]</code>. You open a PR from <code>add-ci</code> into <code>main</code>. Does it run?</p>
+  <ul class="opts">
+    <li data-correct>Yes, the filter matches the base</li>
+    <li>No, the filter matches the head</li>
+    <li>Only after the PR gets merged</li>
+    <li>Only if add-ci is renamed main</li>
+  </ul>
+  <p class="why">For <code>pull_request</code>, <code>branches</code> filters on the branch the PR targets: the base.</p>
+</div>
+<div class="quiz">
+  <p class="q">What code does CI test for a pull request, by default?</p>
+  <ul class="opts">
+    <li data-correct>Your branch merged into main</li>
+    <li>Your branch alone, without main</li>
+    <li>Main alone, without your branch</li>
+    <li>Only files you changed today</li>
+  </ul>
+  <p class="why"><code>actions/checkout</code> checks out <code>refs/pull/N/merge</code>, so tests run "against the merged result, not just the head branch alone."</p>
+</div>
+<div class="quiz">
+  <p class="q">Your private repo is on GitHub Free. Can you require green checks before merging?</p>
+  <ul class="opts">
+    <li data-correct>No; Free protects public repos only</li>
+    <li>Yes; every plan protects every repo</li>
+    <li>Yes, but only for draft PRs</li>
+    <li>No; Actions never runs on private</li>
+  </ul>
+  <p class="why">Protected branches and rulesets are available for public repositories on GitHub Free; private repositories need Pro, Team, or Enterprise.</p>
+</div>
+<div class="quiz">
+  <p class="q">In this course's Pages workflow, what triggers a deployment?</p>
+  <ul class="opts">
+    <li data-correct>A push landing on main</li>
+    <li>Opening any new pull request</li>
+    <li>Pushing to any feature branch</li>
+    <li>Running pytest on your laptop</li>
+  </ul>
+  <p class="why">CD runs on <code>push</code> to <code>main</code>. Pull requests get CI, not deployments.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<div class="primary-source">
+  Read Martin Fowler's <a href="https://martinfowler.com/articles/continuousIntegration.html">Continuous Integration</a>, at least the "Practices of Continuous Integration" section. It explains why the build must be fast, self-testing, and fixed immediately when broken. For hands-on reinforcement, try GitHub Skills' <a href="https://github.com/skills/test-with-actions">Test with Actions</a>.
+</div>
+
+<div class="ask-agent">
+  Anything fuzzy? Ask Claude: <em>"Read my .github/workflows/ci.yml and explain each line,"</em> or <em>"My PR check is failing. Run <code>gh pr checks</code> and summarise the error."</em>
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Martin Fowler, <a href="https://martinfowler.com/articles/continuousIntegration.html">Continuous Integration</a> (2024).</li>
+    <li id="s2">GitHub Docs, <a href="https://docs.github.com/en/actions/get-started/continuous-integration">Continuous integration</a>.</li>
+    <li id="s3">Martin Fowler, <a href="https://martinfowler.com/articles/branching-patterns.html">Patterns for Managing Source Code Branches</a> (mainline, healthy branch, integration frequency).</li>
+    <li id="s4">GitHub Docs, <a href="https://docs.github.com/en/actions/tutorials/build-and-test-code/python">Building and testing Python</a>.</li>
+    <li id="s5">GitHub Docs, <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpull_requestpull_request_targetbranchesbranches-ignore">Workflow syntax: on.pull_request.branches</a>.</li>
+    <li id="s6">GitHub Docs, <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request">Events that trigger workflows: pull_request</a>.</li>
+    <li id="s7">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/status-checks">Status checks</a>.</li>
+    <li id="s8">GitHub Docs, <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">About protected branches</a>.</li>
+    <li id="s9">GitHub Docs, <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets">About rulesets</a>.</li>
+    <li id="s10">GitHub Docs, <a href="https://docs.github.com/en/actions/get-started/continuous-deployment">Continuous deployment</a>.</li>
+    <li id="s11">GitHub Docs, <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">Using custom workflows with GitHub Pages</a> and <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow">Configuring a publishing source</a>.</li>
+    <li id="s12">Release pages: <a href="https://github.com/actions/checkout/releases">actions/checkout</a>, <a href="https://github.com/actions/setup-python/releases">actions/setup-python</a>, <a href="https://github.com/actions/configure-pages/releases">configure-pages</a>, <a href="https://github.com/actions/upload-pages-artifact/releases">upload-pages-artifact</a>, <a href="https://github.com/actions/deploy-pages/releases">deploy-pages</a> (checked October 2026).</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0004-push-and-pull-requests.html">← Lesson 4: Push and pull requests</a>
+  <a href="0006-claude-code-on-a-branch.html">Lesson 6: Claude Code on a branch →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+</body>
+</html>
