@@ -16,7 +16,7 @@ A nine-lesson, self-paced HTML course that teaches data science students to use 
 | 8 | Notebooks and branches | nbdime and Jupytext |
 | 9 | Capstone: the full loop | Interleaved review + end-to-end agentic task |
 
-References: [glossary](reference/glossary.html), [cheat sheet](reference/cheatsheet.html), [Claude Code branch workflow](reference/claude-code-workflow.html).
+References: [glossary](reference/glossary.html), [cheat sheet](reference/cheatsheet.html), [Claude Code branch workflow](reference/claude-code-workflow.html), [branch practice tutor](reference/practice-tutor.html) (a copy-paste prompt; its source of truth is [`practice-tutor.md`](reference/practice-tutor.md)).
 
 ## How this repo is built
 
@@ -31,6 +31,7 @@ npx -y html-validate@9 index.html lessons/*.html reference/*.html
 npx -y -p typescript@5 tsc --noEmit --allowJs --checkJs --strict --target es2022 --lib es2022,dom,dom.iterable assets/*.js
 node --test tests/branch-sim.test.mjs
 node tests/check-links.mjs
+node tests/check-tutor-prompt.mjs
 ```
 
 Teaching-workspace files (`MISSION.md`, `RESOURCES.md`, `NOTES.md`, `learning-records/`) record the course's goals and sources.

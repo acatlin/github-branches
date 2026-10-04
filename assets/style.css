@@ -239,3 +239,12 @@ dl.glossary .avoid { font-size: .85rem; color: var(--muted); font-style: italic;
   .quiz .why { display: block; }
   h2 { break-after: avoid; }
 }
+
+/* ---------- copyable prompt (reference/practice-tutor.html) ---------- */
+.prompt-box { border: 1px solid var(--rule); border-radius: 4px; margin: 1.25rem 0; }
+.prompt-box .bar { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .5rem .75rem; border-bottom: 1px solid var(--rule); font-size: .85rem; color: var(--muted); }
+.prompt-box pre { margin: 0; border-radius: 0 0 4px 4px; max-height: 28rem; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+button.copy {
+  font: inherit; font-size: .85rem; padding: .35rem .8rem; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+}

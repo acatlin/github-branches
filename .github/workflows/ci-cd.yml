@@ -31,6 +31,8 @@ jobs:
         run: node tests/check-quizzes.mjs
       - name: Check internal links
         run: node tests/check-links.mjs
+      - name: Check the practice tutor page matches its prompt
+        run: node tests/check-tutor-prompt.mjs
 
   deploy:
     name: Deploy to GitHub Pages
