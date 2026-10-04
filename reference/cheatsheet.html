@@ -49,6 +49,9 @@
   <tbody>
     <tr><td><code>git diff main...feature</code></td><td><a href="glossary.html#three-dot-diff">Three-dot diff</a>: only what <code>feature</code> changed since it left <code>main</code> — what a PR shows (<a href="https://git-scm.com/docs/git-diff">docs</a>).</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
     <tr><td><code>git log --oneline main..feature</code></td><td>Commits on <code>feature</code> that are not on <code>main</code>.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git merge-base main feature</code></td><td>Print the <a href="glossary.html#merge-base">merge base</a>: the commit where <code>feature</code> split from <code>main</code> (<a href="https://git-scm.com/docs/git-merge-base">docs</a>).</td><td><a href="../lessons/0010-two-diffs-two-questions.html">10</a></td></tr>
+    <tr><td><code>git diff main..feature</code></td><td><a href="glossary.html#two-dot-diff">Two-dot diff</a>: how the two tips differ right now. Work that landed on <code>main</code> after the split shows reversed.</td><td><a href="../lessons/0010-two-diffs-two-questions.html">10</a></td></tr>
+    <tr><td><code>git log --oneline HEAD..origin/main</code></td><td>After <code>git fetch</code>: commits on <code>origin/main</code> that your branch lacks. Any output means a <a href="glossary.html#stale-branch">stale branch</a>.</td><td><a href="../lessons/0011-when-main-moves.html">11</a></td></tr>
     <tr><td><code>gh pr diff</code> · <code>--name-only</code></td><td>The current branch's PR diff, or just the changed file names.</td><td><a href="../lessons/0006-claude-code-on-a-branch.html">6</a></td></tr>
   </tbody>
 </table></div>
@@ -104,6 +107,7 @@ df = df.dropna(subset=cols) <span class="c"># their side (branch being merged)</
   <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
   <tbody>
     <tr><td><code>git worktree add ../proj-a -b feature-a</code></td><td>New folder with a new branch checked out, sharing the same repository (<a href="https://git-scm.com/docs/git-worktree">docs</a>).</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+    <tr><td><code>git worktree add ../proj-baseline -b baseline $(git merge-base main feature)</code></td><td>Worktree on a new branch at the merge base, for a <a href="glossary.html#baseline">baseline</a> run of an eval.</td><td><a href="../lessons/0012-fair-baselines-for-evals.html">12</a></td></tr>
     <tr><td><code>git worktree list</code></td><td>Main worktree first, then linked ones with their branches.</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
     <tr><td><code>git worktree remove ../proj-a</code></td><td>Remove a clean worktree (<code>--force</code> if it has changes).</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
     <tr><td><code>git worktree prune</code></td><td>Clean up records of worktrees whose folders are gone.</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>

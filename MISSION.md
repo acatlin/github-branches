@@ -10,6 +10,7 @@ Data science students who already commit and push to GitHub need to work safely 
 - Explain how CI checks run on pull requests and how CD deploys from `main`.
 - Run a full Claude Code task on its own branch: brief → branch → agent commits → diff review → PR → green CI → merge.
 - Run two Claude Code sessions in parallel using git worktrees.
+- Choose the right comparison and baseline when judging an agent's work, in code and in eval scores.
 
 ## Constraints
 - Audience: data science students, basic GitHub skills (clone/add/commit/push), no branch experience.

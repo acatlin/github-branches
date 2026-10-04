@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>When main Moves</title>
+<meta name="description" content="Lesson 11: why every merged pull request makes the other open branches stale, how to spot a stale branch, and how to update it with git merge origin/main.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <a href="../reference/practice-tutor.html">Practice tutor</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Part 2 · Lesson 11 of 12 · about 15 minutes</p>
+<h1>When <code>main</code> moves</h1>
+<p class="subtitle">A review describes a branch at one moment. <code>main</code> doesn't hold still.</p>
+
+<div class="win">You will recognise a <a href="../reference/glossary.html#stale-branch">stale branch</a>, update it with <code>git merge origin/main</code>, and show that the two diffs from Lesson 10 agree again before you merge.</div>
+
+<h2>Agree, drift, agree again</h2>
+<p>Lesson 10 ended with two diffs of the same branch that printed different things. Nothing about the branch had changed. <code>main</code> had moved. A branch goes through three states, and the two diffs tell you which one it is in:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>State of the branch</th><th>Its <a href="../reference/glossary.html#merge-base">merge base</a> with <code>main</code></th><th>Two dots versus three dots</th></tr></thead>
+  <tbody>
+    <tr><td><code>main</code> hasn't moved since the split</td><td>The tip of <code>main</code></td><td>Identical</td></tr>
+    <tr><td><code>main</code> has moved: the branch is stale</td><td>An older commit</td><td>Different. Two dots also show <code>main</code>'s new work, reversed</td></tr>
+    <tr><td>The branch has been updated</td><td>The tip of <code>main</code> again</td><td>Identical again</td></tr>
+  </tbody>
+</table>
+</div>
+<p>GitHub's docs describe the drift: "When you use a two-dot comparison, the diff changes when the base branch is updated, even if you haven't made any changes to the topic branch."<a class="cite" href="#s1">1</a> They describe the cure too: "When you merge the base branch, the diffs shown by two-dot and three-dot comparisons are the same."<a class="cite" href="#s1">1</a></p>
+
+<figure>
+  <svg viewBox="0 0 560 264" role="img" aria-label="Top: main has moved one commit past the merge base, so the branch add-loader is stale and its merge base is an older commit. Bottom: after main is merged into add-loader, the merge base is the tip of main again.">
+    <text x="10" y="18" class="label" font-weight="600">Stale: main moved after the split</text>
+    <line x1="50" y1="50" x2="330" y2="50" class="main-line" stroke-width="3"/>
+    <path d="M170 50 C220 50 220 95 270 95" class="feat-line" stroke-width="3" fill="none"/>
+    <rect x="157" y="37" width="26" height="26" class="mark-base"/>
+    <circle cx="50" cy="50" r="9" class="main-fill"/>
+    <circle cx="170" cy="50" r="9" class="main-fill"/>
+    <circle cx="330" cy="50" r="9" class="main-fill"/>
+    <circle cx="270" cy="95" r="9" class="feat-fill"/>
+    <text x="350" y="54" font-weight="600">main</text>
+    <text x="290" y="99" font-weight="600">add-loader</text>
+    <text x="170" y="86" text-anchor="middle" class="label">merge base</text>
+
+    <text x="10" y="150" class="label" font-weight="600">Updated: main merged into the branch</text>
+    <line x1="50" y1="200" x2="330" y2="200" class="main-line" stroke-width="3"/>
+    <path d="M170 200 C220 200 220 245 270 245 L410 245" class="feat-line" stroke-width="3" fill="none"/>
+    <path d="M330 200 C365 200 375 245 410 245" class="main-line" stroke-width="3" fill="none"/>
+    <rect x="317" y="187" width="26" height="26" class="mark-base"/>
+    <circle cx="50" cy="200" r="9" class="main-fill"/>
+    <circle cx="170" cy="200" r="9" class="main-fill"/>
+    <circle cx="330" cy="200" r="9" class="main-fill"/>
+    <circle cx="270" cy="245" r="9" class="feat-fill"/>
+    <circle cx="410" cy="245" r="11" class="feat-fill"/>
+    <text x="352" y="192" font-weight="600">main</text>
+    <text x="430" y="249" font-weight="600">add-loader</text>
+    <text x="330" y="176" text-anchor="middle" class="label">merge base</text>
+  </svg>
+  <figcaption>The square is the merge base. Updating adds a merge commit to the branch. From then on, everything on <code>main</code> is also in the branch, so the merge base is the tip of <code>main</code>.</figcaption>
+</figure>
+
+<h2>What a stale branch does to your review</h2>
+<p>A stale branch is one whose merge base with <code>main</code> is no longer the tip of <code>main</code>. Your three-dot diff is still an honest list of what the branch changed. What has gone stale is everything you concluded from it:</p>
+<ul>
+  <li><strong>You reviewed the change against an older <code>main</code>.</strong> Merging puts the branch's changes on top of today's <code>main</code>. Nobody has read that combination.</li>
+  <li><strong>Your tests ran against an older <code>main</code>.</strong> <code>pytest</code> on the branch tested the branch's files, and those files don't include what landed on <code>main</code> since.</li>
+  <li><strong>The green check can be old too.</strong> A pull request workflow tests the merged result (Lesson 5), but "By default, a workflow only runs when a <code>pull_request</code> event's activity type is <code>opened</code>, <code>synchronize</code>, or <code>reopened</code>."<a class="cite" href="#s5">5</a> Someone else's merge into <code>main</code> is none of those. The check tells you about the <code>main</code> that existed the last time you pushed to the branch.</li>
+</ul>
+<p>GitHub's advice is to update "to catch conflicts or test failures early."<a class="cite" href="#s2">2</a> Its docs on status checks name the risk of skipping that step: "Status checks may fail after you merge your branch if there are incompatible changes with the base branch."<a class="cite" href="#s4">4</a></p>
+
+<h2>Parallel agents make this routine</h2>
+<p>In Lesson 7 you ran two Claude Code sessions in two worktrees and opened two pull requests. Look at what the first merge does to the second branch:</p>
+<ol>
+  <li>Both branches split from the same commit on <code>main</code>. Neither is stale.</li>
+  <li>You squash-merge the first pull request. <code>main</code> gains one new commit.</li>
+  <li>The second branch hasn't changed, but its merge base is now one commit behind the tip of <code>main</code>. It is stale, and so is your review of it.</li>
+</ol>
+<p>Every merged pull request moves <code>main</code> underneath every other open branch. With three agent branches open, each merge makes the other two stale. A <a href="../reference/glossary.html#squash-merge">squash merge</a> behaves the same way as any other merge here: it puts a new commit on <code>main</code> that the other branches don't have.<a class="cite" href="#s7">7</a> The rule for parallel work is short: <strong>after each merge, update the branches that are still open and check them again.</strong></p>
+
+<h2>Spotting a stale branch</h2>
+<h3>In your terminal</h3>
+<pre><code><span class="p">$ </span>git fetch
+<span class="p">$ </span>git log --oneline HEAD..origin/main
+c9e448a Say how to run the tests (#12)</code></pre>
+<p><code>HEAD..origin/main</code> lists the commits that are on <code>origin/main</code> and not on your branch.<a class="cite" href="#s6">6</a> Any output means the branch is stale. No output means it is up to date.</p>
+<p class="warn">Fetch first, and compare with <code>origin/main</code>, not <code>main</code>. <code>origin/main</code> only moves when you fetch or pull (Lesson 4), and your local <code>main</code> only moves when you pull. If you skip the fetch, a stale branch looks up to date.</p>
+
+<h3>On GitHub</h3>
+<p>In the merge box near the bottom of a pull request, GitHub offers an <strong>Update branch</strong> button "when there are no merge conflicts and the branch is behind the base branch."<a class="cite" href="#s2">2</a> The button appears in two cases: <code>main</code> is protected with "Require branches to be up to date before merging," or the repository setting <strong>Always suggest updating pull request branches</strong> is on (Settings → General → Pull Requests).<a class="cite" href="#s3">3</a> If neither applies, a stale pull request shows no button, so turn the setting on in <code>penguins-lab</code>.</p>
+<p>That protection setting is the strict form of the required status checks from Lesson 5. With it on, "The branch <strong>must</strong> be up to date with the base branch before merging."<a class="cite" href="#s4">4</a> GitHub then refuses to merge a stale branch for you.</p>
+
+<h2>Updating the branch</h2>
+<p>You already know the command from Lessons 7 and 9. On the stale branch:</p>
+<pre><code><span class="p">$ </span>git fetch
+<span class="p">$ </span>git merge origin/main
+Merge made by the 'ort' strategy.
+ README.md | 2 ++
+ 1 file changed, 2 insertions(+)</code></pre>
+<p>Git opens your editor with a ready-made merge message. Save and close it, or add <code>--no-edit</code> to accept the message as it is.<a class="cite" href="#s8">8</a> The merge commit joins <code>main</code>'s new work to your branch. Now the branch contains everything on <code>main</code>, the merge base is the tip of <code>main</code>, and the two diffs agree. GitHub recommends doing this often: "merge the base branch (for example, <code>main</code>) into your topic branch frequently."<a class="cite" href="#s1">1</a></p>
+<p>If both sides changed the same lines you get a <a href="../reference/glossary.html#merge-conflict">merge conflict</a>, and you resolve it as you did in Lesson 3. After any update, run the tests again. They are now testing the combination that will land on <code>main</code>.</p>
+<p class="note">GitHub's <strong>Update branch</strong> button does the same merge on GitHub's side.<a class="cite" href="#s2">2</a> If you use it, run <code>git pull</code> afterwards so your local branch has the merge commit too. The button's dropdown also offers a rebase. This course doesn't use rebase.</p>
+
+<h2>Do it for real: make the diffs agree again</h2>
+<p>You left <code>add-loader</code> stale at the end of Lesson 10. Tick each step as you go.</p>
+<ol class="steps" data-key="l11">
+  <li><label><input type="checkbox"> Publish the branch and open its pull request.</label>
+<pre><code><span class="p">$ </span>git switch add-loader
+<span class="p">$ </span>git push -u origin add-loader
+<span class="p">$ </span>gh pr create --fill
+<span class="p">$ </span>gh pr view --web</code></pre>
+    <p>On <em>Files changed</em> you see only <code>load.py</code>. That is the three-dot diff, and it looks exactly as it would if <code>main</code> had never moved. Nothing on that tab tells you the branch is stale. Then look in the merge box for <strong>Update branch</strong>. It is there only if one of the two settings above is on.</p></li>
+  <li><label><input type="checkbox"> Ask Git whether the branch is stale.</label>
+<pre><code><span class="p">$ </span>git fetch
+<span class="p">$ </span>git log --oneline HEAD..origin/main
+c9e448a Say how to run the tests (#12)</code></pre>
+    <p>One commit on <code>main</code> that the branch lacks. It is stale.</p></li>
+  <li><label><input type="checkbox"> Update it.</label>
+<pre><code><span class="p">$ </span>git merge origin/main
+Merge made by the 'ort' strategy.
+ README.md | 2 ++
+ 1 file changed, 2 insertions(+)</code></pre></li>
+  <li><label><input type="checkbox"> Show that it is up to date and that the two diffs agree.</label>
+<pre><code><span class="p">$ </span>git log --oneline HEAD..origin/main
+<span class="p">$ </span>git diff --stat origin/main...HEAD
+ load.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+<span class="p">$ </span>git diff --stat origin/main..HEAD
+ load.py | 5 +++++
+ 1 file changed, 5 insertions(+)</code></pre>
+    <p>The <code>git log</code> prints nothing. The README lines are gone from the two-dot diff, because the branch now has them.</p></li>
+  <li><label><input type="checkbox"> Test the combination, push it, and let CI check it.</label>
+<pre><code><span class="p">$ </span>python -m pytest -q
+<span class="p">$ </span>git push
+<span class="p">$ </span>gh pr checks --watch</code></pre></li>
+  <li><label><input type="checkbox"> Merge and tidy up.</label>
+<pre><code><span class="p">$ </span>gh pr merge --squash --delete-branch
+<span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull</code></pre></li>
+</ol>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">You reviewed <code>add-loader</code>'s three-dot diff yesterday. Since then another pull request merged into <code>main</code>. What is true now?</p>
+  <ul class="opts">
+    <li data-correct>Merging gives a result nobody reviewed</li>
+    <li>The three-dot diff shows main's changes</li>
+    <li>Git has deleted the branch's commits</li>
+    <li>The pull request was closed automatically</li>
+  </ul>
+  <p class="why">The three-dot diff still lists only the branch's changes. What's new is the <code>main</code> they will land on. That combination hasn't been read or tested.</p>
+</div>
+<div class="quiz">
+  <p class="q">After <code>git fetch</code>, what does <code>git log --oneline HEAD..origin/main</code> print when your branch is up to date?</p>
+  <ul class="opts">
+    <li data-correct>Nothing at all</li>
+    <li>Every branch commit</li>
+    <li>main's latest commit</li>
+    <li>A merge conflict</li>
+  </ul>
+  <p class="why">It lists commits on <code>origin/main</code> that your branch lacks. An up-to-date branch lacks none.</p>
+</div>
+<div class="quiz">
+  <p class="q">You run <code>git merge origin/main</code> on a stale branch. Where is its merge base with <code>origin/main</code> afterwards?</p>
+  <ul class="opts">
+    <li data-correct>At the tip of main</li>
+    <li>At the branch's first commit</li>
+    <li>At the repository's first commit</li>
+    <li>Where it was before merging</li>
+  </ul>
+  <p class="why">After the merge the branch contains all of <code>main</code>, so the most recent shared commit is the tip of <code>main</code>. That's why the two diffs agree again.</p>
+</div>
+<div class="quiz">
+  <p class="q">Two agent branches are open. You squash-merge the first. What has happened to the second?</p>
+  <ul class="opts">
+    <li data-correct>It became stale; update and re-check</li>
+    <li>It merged along with the first</li>
+    <li>It lost the commits it had</li>
+    <li>Nothing; its review is still current</li>
+  </ul>
+  <p class="why">The merge moved <code>main</code>. The second branch didn't change, but the <code>main</code> it will land on did.</p>
+</div>
+<div class="quiz">
+  <p class="q">Why run <code>git fetch</code> before you check whether a branch is stale?</p>
+  <ul class="opts">
+    <li data-correct>origin/main only moves when you fetch</li>
+    <li>Fetch merges main into your branch</li>
+    <li>Fetch pushes your branch to GitHub</li>
+    <li>Fetch reruns the pull request checks</li>
+  </ul>
+  <p class="why"><code>origin/main</code> records where GitHub's <code>main</code> was the last time you talked to GitHub. Without a fetch you compare against old news.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<h3>Command drills</h3>
+<div class="drill" data-accept="git log --oneline HEAD..origin/main">
+  <p class="prompt">You have fetched. List, one line each, the commits on <code>origin/main</code> that your current branch doesn't have.</p>
+</div>
+<div class="drill" data-accept="git merge origin/main || git merge --no-edit origin/main || git merge origin/main --no-edit">
+  <p class="prompt">You're on a stale branch and you have fetched. Bring in the latest <code>main</code> from GitHub.</p>
+</div>
+<div class="drill" data-accept="git diff --stat origin/main...HEAD || git diff origin/main...HEAD --stat">
+  <p class="prompt">Summarise with <code>--stat</code> what your current branch changed since it split from <code>origin/main</code>.</p>
+</div>
+
+<div class="primary-source">
+  Read <a href="https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch">Keeping your pull request in sync with the base branch</a> in GitHub Docs (2 minutes), then the "Merging often" paragraph of <a href="https://docs.github.com/en/pull-requests/reference/branches#merging-often">Branches</a>.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"Fetch, then tell me whether this branch is behind origin/main. If it is, merge origin/main in, rerun pytest, and summarise what changed on main."</em> or <em>"List my open pull requests and say which ones are behind main."</em>
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">GitHub Docs, Branches: <a href="https://docs.github.com/en/pull-requests/reference/branches#about-three-dot-comparison-on-github">About three-dot comparison on GitHub</a> and <a href="https://docs.github.com/en/pull-requests/reference/branches#merging-often">Merging often</a>.</li>
+    <li id="s2">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch">Keeping your pull request in sync with the base branch</a>.</li>
+    <li id="s3">GitHub Docs, <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-suggestions-to-update-pull-request-branches">Managing suggestions to update pull request branches</a>.</li>
+    <li id="s4">GitHub Docs, <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging">About protected branches — Require status checks before merging</a> (strict and loose).</li>
+    <li id="s5">GitHub Docs, <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request">Events that trigger workflows — pull_request</a> (default activity types; the merge branch).</li>
+    <li id="s6">Git reference, <a href="https://git-scm.com/docs/gitrevisions#_dotted_range_notations">gitrevisions — the two-dot range notation</a>.</li>
+    <li id="s7">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/pull-request-merges#squash-and-merge-your-commits">About pull request merges — Squash and merge</a>. The effect on a second open branch was verified locally with a squash merge and Git 2.52.</li>
+    <li id="s8">Git reference, <a href="https://git-scm.com/docs/git-merge#Documentation/git-merge.txt---no-edit">git-merge (<code>--edit</code>, <code>--no-edit</code>)</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0010-two-diffs-two-questions.html">← Lesson 10: Two diffs, two questions</a>
+  <a href="0012-fair-baselines-for-evals.html">Lesson 12: Fair baselines for evals →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+</body>
+</html>

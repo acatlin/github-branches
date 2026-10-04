@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GitHub Branches for Agentic Coding</title>
-<meta name="description" content="A nine-lesson course for data science students: use GitHub branches, pull requests, and CI/CD to work safely with Claude Code.">
+<meta name="description" content="A twelve-lesson course in two parts for data science students: use GitHub branches, pull requests, and CI/CD to work safely with Claude Code, then judge the agent's work fairly.">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
   <nav aria-label="Site"><a href="reference/glossary.html">Glossary</a> · <a href="reference/cheatsheet.html">Cheat sheet</a> · <a href="reference/claude-code-workflow.html">Claude workflow</a> · <a href="reference/practice-tutor.html">Practice tutor</a> · <button class="theme-toggle" type="button">Theme</button></nav>
 </header>
 <main>
-<p class="kicker">A short course · 9 lessons · about 15 minutes each</p>
+<p class="kicker">A short course · 12 lessons in two parts · about 15 minutes each</p>
 <h1>GitHub Branches for Agentic Coding</h1>
 <p class="subtitle">For data science students who can commit and push, and now want to let Claude Code work on their code without risking <code>main</code>.</p>
 
@@ -21,7 +21,7 @@
 
 <div class="win">Each lesson gives you one concrete win: a simulator to drive, commands to recall from memory, or real steps in your own practice repository, <code>penguins-lab</code>.</div>
 
-<h2>Lessons</h2>
+<h2 id="part-1">Part 1: The branch workflow</h2>
 <ol class="toc">
   <li><span class="num">01</span><a href="lessons/0001-what-is-a-branch.html">What is a branch?</a>
     <p>A branch is a movable pointer to a commit. Protect <code>main</code> in the simulator.</p></li>
@@ -41,6 +41,17 @@
     <p>Why <code>.ipynb</code> files fight with branches, and how nbdime and Jupytext make peace.</p></li>
   <li><span class="num">09</span><a href="lessons/0009-capstone-full-loop.html">Capstone: the full loop</a>
     <p>Mixed retrieval practice, then issue → worktree → agent → PR → green CI → merge, all on your own.</p></li>
+</ol>
+
+<h2 id="part-2">Part 2: Judging the agent's work</h2>
+<p>Part 1 ends with the capstone and is a complete course on its own. Part 2 adds three lessons on a question Part 1 leaves open: when you compare an agent's branch with <code>main</code>, in code or in a score, what exactly are you comparing it with?</p>
+<ol class="toc" start="10">
+  <li><span class="num">10</span><a href="lessons/0010-two-diffs-two-questions.html">Two diffs, two questions</a>
+    <p>The merge base, and why a three-dot diff shows what a branch changed while a two-dot diff shows how two snapshots differ.</p></li>
+  <li><span class="num">11</span><a href="lessons/0011-when-main-moves.html">When <code>main</code> moves</a>
+    <p>Every merged pull request makes the other open branches stale. Spot it, update the branch, and check again.</p></li>
+  <li><span class="num">12</span><a href="lessons/0012-fair-baselines-for-evals.html">Fair baselines for evals</a>
+    <p>Run a small eval on an agent's branch and compare it with the right baseline, so a gain isn't reported as a loss.</p></li>
 </ol>
 
 <h2>Reference</h2>

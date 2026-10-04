@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Diffs, Two Questions</title>
+<meta name="description" content="Lesson 10: the merge base, and the difference between a two-dot diff and a three-dot diff when you judge an agent's branch.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <a href="../reference/practice-tutor.html">Practice tutor</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Part 2 · Lesson 10 of 12 · about 15 minutes</p>
+<h1>Two diffs, two questions</h1>
+<p class="subtitle">Two dots ask how two snapshots differ. Three dots ask what a branch changed.</p>
+
+<div class="win">You will name the two commits each diff compares, predict what <code>git diff main..add-loader</code> and <code>git diff main...add-loader</code> will cover before you run them, and check your prediction against Git.</div>
+
+<h2>A recipe that never got its reason</h2>
+<p>Since Lesson 2 this course has told you to review a branch with three dots: <code>git diff main...HEAD</code>. It never said what the third dot is for, or what goes wrong with two. That was fine while you wrote the code yourself. When an agent wrote it, the diff is how you judge the work, so you need to know exactly what the diff is comparing.</p>
+<p>Every diff has two ends. The two commands differ only in where they put the left end. To say where, you need one new idea.</p>
+
+<h2>The merge base</h2>
+<p>Walk backwards through the history of <code>main</code> and of your branch. The most recent commit they both contain is their <a href="../reference/glossary.html#merge-base">merge base</a>: the point where the branch split off. Git's definition is "the best common ancestor(s) between two commits to use in a three-way merge."<a class="cite" href="#s1">1</a> GitHub's docs describe it as "The most recent common commit of both branches (merge base)."<a class="cite" href="#s3">3</a></p>
+<p>One command prints it:</p>
+<pre><code><span class="p">$ </span>git merge-base main add-loader
+394e8c73a0127ff8373d51eafb6b2ce45582bf06</code></pre>
+<p>The output is "a commit which is reachable from both" names by following parents.<a class="cite" href="#s1">1</a> It is a full 40-character hash, and it is the same whichever name you put first.</p>
+
+<figure>
+  <svg viewBox="0 0 560 200" role="img" aria-label="main has three commits. The branch add-loader split off at the second commit, which is marked as the merge base, and has two commits of its own. main has gained a third commit since the split. The three-dot diff covers the two branch commits. The two-dot diff covers those and, reversed, main's third commit.">
+    <line x1="60" y1="70" x2="440" y2="70" class="main-line" stroke-width="3"/>
+    <path d="M190 70 C250 70 250 150 310 150 L440 150" class="feat-line" stroke-width="3" fill="none"/>
+    <rect x="177" y="57" width="26" height="26" class="mark-base"/>
+    <circle cx="310" cy="150" r="15" class="mark-added"/>
+    <circle cx="440" cy="150" r="15" class="mark-added"/>
+    <circle cx="440" cy="70" r="15" class="mark-reversed"/>
+    <circle cx="60" cy="70" r="9" class="main-fill"/>
+    <circle cx="190" cy="70" r="9" class="main-fill"/>
+    <circle cx="440" cy="70" r="9" class="main-fill"/>
+    <circle cx="310" cy="150" r="9" class="feat-fill"/>
+    <circle cx="440" cy="150" r="9" class="feat-fill"/>
+    <text x="190" y="40" text-anchor="middle" class="label" font-weight="600">merge base</text>
+    <text x="440" y="40" text-anchor="middle" font-weight="600">main</text>
+    <text x="440" y="186" text-anchor="middle" font-weight="600">add-loader</text>
+    <text x="440" y="106" text-anchor="middle" class="label">landed later</text>
+  </svg>
+  <figcaption>The square is the merge base. Three dots cover the two shaded commits on <code>add-loader</code>. Two dots cover those and, in reverse, the dashed commit that landed on <code>main</code> after the split.</figcaption>
+</figure>
+
+<h2>Two diffs</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th></th><th><a href="../reference/glossary.html#two-dot-diff">Two-dot diff</a></th><th><a href="../reference/glossary.html#three-dot-diff">Three-dot diff</a></th></tr></thead>
+  <tbody>
+    <tr><td>Command</td><td><code>git diff main..add-loader</code></td><td><code>git diff main...add-loader</code></td></tr>
+    <tr><td>Question</td><td>How do these two snapshots differ right now?</td><td>What did this branch change since it split?</td></tr>
+    <tr><td>Left end</td><td>The tip of <code>main</code></td><td>The merge base</td></tr>
+    <tr><td>Right end</td><td>The tip of <code>add-loader</code></td><td>The tip of <code>add-loader</code></td></tr>
+    <tr><td>Same as</td><td><code>git diff main add-loader</code><a class="cite" href="#s2">2</a></td><td><code>git diff $(git merge-base main add-loader) add-loader</code><a class="cite" href="#s2">2</a></td></tr>
+    <tr><td>Work that landed on <code>main</code> after the split</td><td>Shows up, reversed</td><td>Doesn't show up</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The Git reference says the two-dot form "is synonymous to the earlier form (without the <code>..</code>) for viewing the changes between two arbitrary <code>&lt;commit&gt;</code>." The three-dot form is "to view the changes on the branch containing and up to the second <code>&lt;commit&gt;</code>, starting at a common ancestor of both."<a class="cite" href="#s2">2</a></p>
+
+<h3>Why "reversed"?</h3>
+<p>A diff is a recipe for turning the left end into the right end. Suppose someone adds a line to <code>README.md</code> on <code>main</code> after your branch split. The tip of <code>main</code> has that line. The tip of your branch doesn't, because the branch started before the line existed. To turn the left end into the right end, the recipe has to take the line out. So the two-dot diff prints it with a minus sign.</p>
+<p class="warn">A red minus line in a two-dot diff doesn't mean the agent deleted anything. It can mean <code>main</code> gained that line after the branch split. If you review an agent's branch with two dots, you will blame it for undoing other people's work.</p>
+<p>The three-dot diff avoids this. GitHub's docs put it this way: "Because the three-dot comparison uses the merge base, it focuses on 'what a pull request introduces.'"<a class="cite" href="#s3">3</a> That's why "Pull requests on GitHub show a three-dot diff."<a class="cite" href="#s3">3</a> The <em>Files changed</em> tab you've used since Lesson 4 is this lesson's right-hand column.</p>
+
+<h3>When the two are the same</h3>
+<p>If <code>main</code> hasn't moved since the branch split, the merge base <em>is</em> the tip of <code>main</code>. Both diffs then have the same two ends and print the same text. The distinction only matters once <code>main</code> moves. Lesson 11 is about that moment.</p>
+<p class="note"><code>git log</code> uses the dots differently. In <code>git log main..HEAD</code> from Lesson 6, two dots select a range of commits. In <code>git diff</code> the dots pick two endpoints, and the docs warn that there they "do not mean a range."<a class="cite" href="#s2">2</a></p>
+
+<h2>Try it: predict, then check</h2>
+<p>The simulator has two new commands, <code>git merge-base</code> and <code>git diff</code>. It has no files, so its diff prints no diff text. It tells you which commits' changes the diff would cover and marks them on the graph: a square for the merge base, a shaded disc for changes the diff includes, and a dashed ring for changes it includes in reverse.</p>
+<p><code>main</code> has two commits. <code>add-loader</code> split from the second one and has two commits of its own. Before you press Enter on tasks 2, 3, 5 and 6, decide which commits will be marked. Then run the command and see whether you were right.</p>
+<div class="sim" id="sim10"></div>
+<p>After task 5 the dashed ring sits on <code>main</code>'s new commit: the two-dot diff has spread onto <code>main</code>. After task 6 the marks are back where they were in task 2. The branch didn't change, so the three-dot diff didn't either.</p>
+
+<h2>Do it for real: actual diff text</h2>
+<p>Now the same thing in <code>penguins-lab</code>, with real files. Tick each step as you go.</p>
+<ol class="steps" data-key="l10">
+  <li><label><input type="checkbox"> Start a branch from an up-to-date <code>main</code>.</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull
+<span class="p">$ </span>git switch -c add-loader</code></pre></li>
+  <li><label><input type="checkbox"> Create <code>load.py</code> with this content, then commit it:</label>
+<pre><code>import pandas as pd
+
+def load_penguins(path: str) -&gt; pd.DataFrame:
+    """Read the penguins CSV into a DataFrame."""
+    return pd.read_csv(path)</code></pre>
+<pre><code><span class="p">$ </span>git add load.py
+<span class="p">$ </span>git commit -m "Add load_penguins"</code></pre></li>
+  <li><label><input type="checkbox"> <code>main</code> hasn't moved yet. Check that the merge base is the tip of <code>main</code>, and that both diffs agree:</label>
+<pre><code><span class="p">$ </span>git merge-base main add-loader
+394e8c73a0127ff8373d51eafb6b2ce45582bf06
+<span class="p">$ </span>git log --oneline -1 main
+394e8c7 …
+<span class="p">$ </span>git diff --stat main...add-loader
+ load.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+<span class="p">$ </span>git diff --stat main..add-loader
+ load.py | 5 +++++
+ 1 file changed, 5 insertions(+)</code></pre>
+    <p>Your hashes will differ from these, but your two hashes will start with the same seven characters.</p></li>
+  <li><label><input type="checkbox"> Now let <code>main</code> move. On a second branch, add a blank line and this line to the end of <code>README.md</code>:</label>
+<pre><code>Run the tests with `python -m pytest`.</code></pre>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git switch -c readme-testing
+<span class="c">#   ...edit README.md...</span>
+<span class="p">$ </span>git commit -am "Say how to run the tests"</code></pre>
+    <p>Land it with the Lesson 4 loop: <code>git push -u origin readme-testing</code>, <code>gh pr create --fill</code>, <code>gh pr checks --watch</code>, <code>gh pr merge --squash --delete-branch</code>. Then <code>git switch main</code> and <code>git pull</code>.</p></li>
+  <li><label><input type="checkbox"> Ask for the merge base again. It hasn't moved, but <code>main</code> has:</label>
+<pre><code><span class="p">$ </span>git merge-base main add-loader
+394e8c73a0127ff8373d51eafb6b2ce45582bf06
+<span class="p">$ </span>git log --oneline -1 main
+c9e448a Say how to run the tests (#12)</code></pre></li>
+  <li><label><input type="checkbox"> Predict what each diff will list. Then run both:</label>
+<pre><code><span class="p">$ </span>git diff --stat main...add-loader
+ load.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+<span class="p">$ </span>git diff --stat main..add-loader
+ README.md | 2 --
+ load.py   | 5 +++++
+ 2 files changed, 5 insertions(+), 2 deletions(-)</code></pre></li>
+  <li><label><input type="checkbox"> Look at the part the three-dot diff left out:</label>
+<pre><code><span class="p">$ </span>git diff main..add-loader -- README.md
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1 @@
+ # Palmer Penguins Data Lab
+-
+-Run the tests with `python -m pytest`.</code></pre>
+    <p>Nobody deleted that line. <code>add-loader</code> never had it. The two-dot diff shows the README change from <code>main</code>, reversed.</p></li>
+</ol>
+<p>Leave <code>add-loader</code> unmerged. Lesson 11 picks it up from here.</p>
+
+<h2>Recall the commands</h2>
+<p>Type each command from memory.</p>
+<div class="drill" data-accept="git merge-base main add-loader || git merge-base add-loader main">
+  <p class="prompt">Print the merge base of <code>main</code> and <code>add-loader</code>.</p>
+</div>
+<div class="drill" data-accept="git diff main...add-loader">
+  <p class="prompt">Show only what <code>add-loader</code> changed since it split from <code>main</code>.</p>
+</div>
+<div class="drill" data-accept="git diff main..add-loader || git diff main add-loader">
+  <p class="prompt">Show how the tip of <code>main</code> and the tip of <code>add-loader</code> differ right now.</p>
+</div>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">Which commit is the merge base of <code>main</code> and <code>add-loader</code>?</p>
+  <ul class="opts">
+    <li data-correct>Their most recent shared commit</li>
+    <li>The newest commit on main</li>
+    <li>The first commit ever made</li>
+    <li>The newest commit on add-loader</li>
+  </ul>
+  <p class="why">The merge base is the best common ancestor: the latest commit that both histories contain. <code>git merge-base main add-loader</code> prints it.</p>
+</div>
+<div class="quiz">
+  <p class="q"><code>git diff main..add-loader</code> shows a README line being removed. The agent never touched the README. What is the likely cause?</p>
+  <ul class="opts">
+    <li data-correct>main gained that line later</li>
+    <li>The agent secretly deleted it</li>
+    <li>Git lost the file's history</li>
+    <li>The diff ran on GitHub</li>
+  </ul>
+  <p class="why">Two dots compare the two tips. A line that landed on <code>main</code> after the split is missing from the branch's snapshot, so it shows as a removal.</p>
+</div>
+<div class="quiz">
+  <p class="q">When do the two-dot and three-dot diffs print exactly the same text?</p>
+  <ul class="opts">
+    <li data-correct>main hasn't moved since the split</li>
+    <li>The branch has only one commit</li>
+    <li>Both branches were pushed to GitHub</li>
+    <li>The branch touches one file only</li>
+  </ul>
+  <p class="why">If <code>main</code> hasn't moved, the merge base is the tip of <code>main</code>, so both diffs have the same two ends.</p>
+</div>
+<div class="quiz">
+  <p class="q">Which diff does a pull request's <em>Files changed</em> tab show?</p>
+  <ul class="opts">
+    <li data-correct>Three-dot, from the merge base</li>
+    <li>Two-dot, between the two tips</li>
+    <li>Only the latest commit's changes</li>
+    <li>Everything since the first commit</li>
+  </ul>
+  <p class="why">"Pull requests on GitHub show a three-dot diff": the merge base against the latest version of the head branch.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<div class="primary-source">
+  Read <a href="https://docs.github.com/en/pull-requests/reference/branches#three-dot-and-two-dot-git-diff-comparisons">"Three-dot and two-dot Git diff comparisons"</a> in GitHub Docs, down to "Merging often" (3 minutes). Then look at the small graph drawings in the <a href="https://git-scm.com/docs/git-merge-base#_discussion">Discussion section of git-merge-base</a>.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"Draw the commit graph of this branch and main as text, mark the merge base, and tell me which commits <code>git diff main..HEAD</code> and <code>git diff main...HEAD</code> each cover."</em> Check its answer with <code>git merge-base</code>.
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Git reference, <a href="https://git-scm.com/docs/git-merge-base">git-merge-base</a> (description and discussion). Output also verified locally with Git 2.52.</li>
+    <li id="s2">Git reference, git-diff: <a href="https://git-scm.com/docs/git-diff#Documentation/git-diff.txt-gitdiffoptionscommitcommit--path">the two-dot form</a>, <a href="https://git-scm.com/docs/git-diff#Documentation/git-diff.txt-gitdiffoptionscommitcommit--path-1">the three-dot form</a>, and the note that diff compares endpoints, not ranges.</li>
+    <li id="s3">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/branches#three-dot-and-two-dot-git-diff-comparisons">Three-dot and two-dot Git diff comparisons</a> and <a href="https://docs.github.com/en/pull-requests/reference/branches#about-three-dot-comparison-on-github">About three-dot comparison on GitHub</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0009-capstone-full-loop.html">← Lesson 9: Capstone</a>
+  <a href="0011-when-main-moves.html">Lesson 11: When main moves →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+<script src="../assets/branch-sim.js"></script>
+<script>
+  BranchSim.mount(document.getElementById("sim10"), {
+    setup: [
+      "git commit -m 'load penguins.csv'",
+      "git commit -m 'add drop_missing'",
+      "git switch -c add-loader",
+      "git commit -m 'add load_penguins'",
+      "git commit -m 'test load_penguins'",
+      "git switch main",
+    ],
+    tasks: [
+      { text: "Find the merge base: <code>git merge-base main add-loader</code>.", check: (s) => s.mergeBase !== null && s.highlight === null },
+      { text: "Predict, then run the three-dot diff: <code>git diff main...add-loader</code>.", check: (s) => s.highlight?.form === "..." && s.highlight.added.length === 2 },
+      { text: "Predict, then run the two-dot diff: <code>git diff main..add-loader</code>. Same commits?", check: (s) => s.highlight?.form === ".." && s.highlight.added.length === 2 && s.highlight.reversed.length === 0 },
+      { text: "Move <code>main</code> forward: <code>git commit -m \"update README\"</code>.", check: (s) => s.ahead("main", "add-loader") >= 1 },
+      { text: "Predict, then run the two-dot diff again. What is new?", check: (s) => s.highlight?.form === ".." && s.highlight.reversed.length >= 1 },
+      { text: "Predict, then run the three-dot diff again. What changed?", check: (s) => s.highlight?.form === "..." && s.ahead("main", "add-loader") >= 1 },
+    ],
+  });
+</script>
+</body>
+</html>
