@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fair Baselines for Evals</title>
+<meta name="description" content="Lesson 12: run a small eval on an agent's branch, compare it with the right baseline, and decide whether the branch is safe to merge.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <a href="../reference/practice-tutor.html">Practice tutor</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Part 2 · Lesson 12 of 12 · about 15 minutes</p>
+<h1>Fair baselines for evals</h1>
+<p class="subtitle">A score says nothing until you know what it is being compared with.</p>
+
+<div class="win">You will run a small eval on an agent's branch, work out how much of the score change belongs to that branch and nothing else, and decide whether the branch is safe to merge.</div>
+
+<h2>A score comparison is a diff with one number</h2>
+<p>An <strong>eval</strong> is a script that runs your code on fixed inputs and prints a score. When an agent's branch claims "the eval went up," that claim has two ends, like a diff: the score on the branch, and the <a href="../reference/glossary.html#baseline">baseline</a> you subtract from it. The branch end is easy. The mistake is at the other end.</p>
+<p>The tempting baseline is whatever <code>main</code> scores today. But if <code>main</code> has moved since the branch split, that is the two-dot comparison from Lesson 10 with numbers in place of lines. GitHub's docs say of the two-dot diff that it "changes when the base branch is updated, even if you haven't made any changes to the topic branch."<a class="cite" href="#s4">4</a> A score difference taken that way does the same. It mixes the agent's change with everything else that landed on <code>main</code>.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>You compare the branch with</th><th>Same shape as</th><th>What the difference tells you</th></tr></thead>
+  <tbody>
+    <tr><td>The tip of <code>main</code>, while the branch is <a href="../reference/glossary.html#stale-branch">stale</a></td><td>Two-dot diff</td><td>Nothing clear. The agent's change and <code>main</code>'s newer work are mixed together.</td></tr>
+    <tr><td>The <a href="../reference/glossary.html#merge-base">merge base</a></td><td>Three-dot diff</td><td><strong>Attribution:</strong> what this branch changed, and nothing else.</td></tr>
+    <tr><td>The tip of <code>main</code>, after updating the branch</td><td>Both diffs agree</td><td><strong>Merge safety:</strong> what merging will do to <code>main</code> today.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The last two rows are both fair, and they answer different questions. This lesson's exercise gets a number for each row.</p>
+
+<h2>A small eval for <code>penguins-lab</code></h2>
+<p>The code under test is a cleaning pipeline built on the <code>drop_missing</code> function you wrote in Lesson 2. Two of its steps don't do anything yet:</p>
+<div class="prompt-box">
+  <div class="bar"><span><code>pipeline.py</code></span><button class="copy" type="button" data-target="pipeline-py">Copy</button></div>
+<pre id="pipeline-py" class="code"><code>import pandas as pd
+from clean import drop_missing
+
+
+def fix_species(species: pd.Series) -&gt; pd.Series:
+    """Return species names in one spelling, such as 'Adelie'."""
+    return species
+
+
+def fix_sex(sex: pd.Series) -&gt; pd.Series:
+    """Return sex labels as 'male' or 'female'."""
+    return sex
+
+
+def clean_penguins(df: pd.DataFrame) -&gt; pd.DataFrame:
+    """Drop unusable rows, then tidy the labels."""
+    df = drop_missing(df, ["bill_length_mm"])
+    df["species"] = fix_species(df["species"])
+    df["sex"] = fix_sex(df["sex"])
+    return df</code></pre>
+</div>
+<p>The eval feeds the pipeline ten messy rows and compares what comes out with a table that was checked by hand. A row counts as right if it matches the expected row exactly, or if it was meant to be dropped and is gone.</p>
+<div class="prompt-box">
+  <div class="bar"><span><code>eval_clean.py</code></span><button class="copy" type="button" data-target="eval-py">Copy</button></div>
+<pre id="eval-py" class="code"><code>"""Score clean_penguins() against a hand-checked expected output."""
+import pandas as pd
+from pipeline import clean_penguins
+
+COLUMNS = ["id", "species", "sex", "bill_length_mm", "body_mass_g"]
+
+MESSY = [
+    (1, "Adelie", "male", 39.1, 3750),
+    (2, "Adelie", "female", 39.5, 3800),
+    (3, "adelie ", "male", 40.3, 3250),
+    (4, "GENTOO", "female", 46.1, 4500),
+    (5, "Gentoo", "MALE", 50.0, 5700),
+    (6, "Gentoo", "F", 45.5, 4650),
+    (7, "Chinstrap", "M", 51.3, 3650),
+    (8, "Chinstrap", "female", None, 3700),
+    (9, "Chinstrap", "female", 46.5, 3500),
+    (10, "Adelie", "male", 38.9, 3600),
+]
+
+# Checked by hand: what each row should look like after cleaning.
+# Row 8 has no bill length, so it should be gone.
+EXPECTED = {
+    1: ("Adelie", "male", 39.1, 3750),
+    2: ("Adelie", "female", 39.5, 3800),
+    3: ("Adelie", "male", 40.3, 3250),
+    4: ("Gentoo", "female", 46.1, 4500),
+    5: ("Gentoo", "male", 50.0, 5700),
+    6: ("Gentoo", "female", 45.5, 4650),
+    7: ("Chinstrap", "male", 51.3, 3650),
+    9: ("Chinstrap", "female", 46.5, 3500),
+    10: ("Adelie", "male", 38.9, 3600),
+}
+
+cleaned = clean_penguins(pd.DataFrame(MESSY, columns=COLUMNS))
+rows = cleaned.itertuples(index=False, name=None)
+got = {row[0]: row[1:] for row in rows}
+ids = [row[0] for row in MESSY]
+wrong = [i for i in ids if got.get(i) != EXPECTED.get(i)]
+
+print("wrong rows:", *wrong or ["none"])
+print(f"score: {len(ids) - len(wrong)}/{len(ids)}")</code></pre>
+</div>
+<p>Two properties make this eval useful for comparing branches:</p>
+<ul>
+  <li><strong>It needs only pandas</strong>, which you installed for Lesson 2.</li>
+  <li><strong>It is deterministic.</strong> There is no randomness and no network call, so the same commit prints the same score every time. Any difference between two runs comes from the code.</li>
+</ul>
+<p>It also prints which rows are wrong, so you can see what a change fixed, not just how many.</p>
+
+<h2>Do it for real: four runs</h2>
+<p>You'll build a short history, then run the eval four times, in this order: the tip of <code>main</code>, the merge base, the branch tip, and the branch after updating. The scores printed below came from a rehearsal of these exact steps.<a class="cite" href="#s7">7</a> Yours should match.</p>
+<ol class="steps" data-key="l12">
+  <li><label><input type="checkbox"> <strong>Put the eval on <code>main</code>.</strong> Create the two files above on a branch and land them.</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull
+<span class="p">$ </span>git switch -c add-eval
+<span class="c">#   ...create pipeline.py and eval_clean.py...</span>
+<span class="p">$ </span>git add pipeline.py eval_clean.py
+<span class="p">$ </span>git commit -m "Add cleaning pipeline and its eval"</code></pre>
+    <p>Use the Lesson 4 loop: <code>git push -u origin add-eval</code>, <code>gh pr create --fill</code>, <code>gh pr checks --watch</code>, <code>gh pr merge --squash --delete-branch</code>. Then <code>git switch main</code> and <code>git pull</code>.</p></li>
+  <li><label><input type="checkbox"> <strong>Play the agent.</strong> So that every student gets the same numbers, you type the agent's change yourself. In <code>pipeline.py</code>, change the last line of <code>fix_species</code> to:</label>
+<pre><code>    return species.str.strip().str.title()</code></pre>
+<pre><code><span class="p">$ </span>git switch -c normalize-species
+<span class="c">#   ...edit pipeline.py...</span>
+<span class="p">$ </span>git commit -am "Normalize species names (eval: 7/10)"</code></pre>
+    <p>The commit message carries the score the agent reports for its own branch: 7 out of 10.</p></li>
+  <li><label><input type="checkbox"> <strong>Meanwhile, <code>main</code> moves.</strong> A second session fixes the sex labels and its pull request merges first. In <code>pipeline.py</code>, change the last line of <code>fix_sex</code> to:</label>
+<pre><code>    return sex.str.lower().str[0].map({"m": "male", "f": "female"})</code></pre>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git switch -c normalize-sex
+<span class="c">#   ...edit pipeline.py...</span>
+<span class="p">$ </span>git commit -am "Normalize sex labels"</code></pre>
+    <p>Land it with the Lesson 4 loop, then <code>git switch main</code> and <code>git pull</code>. <code>normalize-species</code> is now a stale branch.</p></li>
+  <li><label><input type="checkbox"> <strong>Run 1: the tip of <code>main</code>.</strong> This is the baseline most people reach for.</label>
+<pre><code><span class="p">$ </span>python eval_clean.py
+wrong rows: 3 4
+score: 8/10</code></pre>
+    <p>The agent reported 7/10. <code>main</code> scores 8/10. Subtract, and the branch looks like a loss of one row. Write down that verdict: <strong>−1</strong>. It is wrong, and the next two runs show why.</p></li>
+  <li><label><input type="checkbox"> <strong>Run 2: the merge base.</strong> Check out the commit where the branch split, which <code>git merge-base</code> finds for you,<a class="cite" href="#s1">1</a> in a second <a href="../reference/glossary.html#worktree">worktree</a>, and run the same eval there.</label>
+<pre><code><span class="p">$ </span>git worktree add ../penguins-lab-baseline -b baseline $(git merge-base main normalize-species)
+Preparing worktree (new branch 'baseline')
+<span class="p">$ </span>cd ../penguins-lab-baseline
+<span class="p">$ </span>python eval_clean.py
+wrong rows: 3 4 5 6 7
+score: 5/10
+<span class="p">$ </span>cd ../penguins-lab</code></pre>
+    <p><code>$(…)</code> runs the inner command first and puts its output, the merge base's hash, into the outer command. So this is Lesson 7's <code>git worktree add &lt;path&gt; -b &lt;branch&gt;</code> with a starting commit on the end: a new branch named <code>baseline</code> "starting at" that commit.<a class="cite" href="#s2">2</a> Stay in the same terminal. An activated Python environment belongs to your shell, so the same pandas runs in the new folder.<a class="cite" href="#s5">5</a></p></li>
+  <li><label><input type="checkbox"> <strong>Run 3: the branch tip.</strong> Don't take the agent's number on trust. Reproduce it.</label>
+<pre><code><span class="p">$ </span>git switch normalize-species
+<span class="p">$ </span>python eval_clean.py
+wrong rows: 5 6 7
+score: 7/10</code></pre>
+    <p>The report was accurate. Compare it with run 2: the branch started at 5/10 and reached 7/10. Rows 3 and 4 left the wrong list. That is <strong>+2</strong>, and it belongs to this branch alone. It is the score version of a three-dot diff, which compares the merge base with the branch tip.<a class="cite" href="#s3">3</a></p></li>
+  <li><label><input type="checkbox"> <strong>Run 4: the branch after updating.</strong> Bring in <code>main</code> as you did in Lesson 11, then run the eval and the tests.</label>
+<pre><code><span class="p">$ </span>git fetch
+<span class="p">$ </span>git merge origin/main
+Auto-merging pipeline.py
+Merge made by the 'ort' strategy.
+<span class="p">$ </span>python eval_clean.py
+wrong rows: none
+score: 10/10
+<span class="p">$ </span>python -m pytest -q</code></pre>
+    <p>This is what <code>main</code> will score after the merge. Compare it with run 1: 8/10 becomes 10/10, another <strong>+2</strong>.</p></li>
+  <li><label><input type="checkbox"> <strong>Remove the baseline.</strong> You have the number, so the worktree and its branch can go.</label>
+<pre><code><span class="p">$ </span>git worktree remove ../penguins-lab-baseline
+<span class="p">$ </span>git branch -d baseline
+Deleted branch baseline (was c3b53d0).</code></pre>
+    <p>Lowercase <code>-d</code> is enough. The <code>baseline</code> commit is part of your branch's history, so nothing is lost.<a class="cite" href="#s6">6</a></p></li>
+  <li><label><input type="checkbox"> <strong>Decide, then ship.</strong> The branch improves the score on its own and on top of today's <code>main</code>, and the tests pass. It is safe to merge.</label>
+<pre><code><span class="p">$ </span>git push -u origin normalize-species
+<span class="p">$ </span>gh pr create --fill
+<span class="p">$ </span>gh pr checks --watch
+<span class="p">$ </span>gh pr merge --squash --delete-branch
+<span class="p">$ </span>git switch main
+<span class="p">$ </span>git pull</code></pre></li>
+</ol>
+
+<h2>Reading the four numbers</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Run</th><th>Commit</th><th>Score</th><th>Wrong rows</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Tip of <code>main</code></td><td>8/10</td><td>3 4</td></tr>
+    <tr><td>2</td><td>Merge base</td><td>5/10</td><td>3 4 5 6 7</td></tr>
+    <tr><td>3</td><td>Tip of <code>normalize-species</code></td><td>7/10</td><td>5 6 7</td></tr>
+    <tr><td>4</td><td><code>normalize-species</code> after updating</td><td>10/10</td><td>none</td></tr>
+  </tbody>
+</table>
+</div>
+<ul>
+  <li><strong>Run 3 against run 1: −1.</strong> The unfair comparison. <code>main</code> had gained the sex-label fix, worth three rows, and the stale branch didn't have it. The agent's +2 was buried under a −3 that had nothing to do with the agent. A gain was reported as a loss.</li>
+  <li><strong>Run 3 against run 2: +2.</strong> Attribution. Both ends lack the sex-label fix, so the only difference between them is the branch's own change.</li>
+  <li><strong>Run 4 against run 1: +2.</strong> Merge safety. Both ends have the sex-label fix, so the difference is what merging adds to <code>main</code> today.</li>
+</ul>
+<p>Here the two fair answers are the same number, because the two changes fix different rows. They don't have to match. If one row needed both fixes, it would stay wrong in runs 1, 2 and 3 and come right only in run 4. Attribution would still say +2 and merge safety would say +3. So choose the comparison by the question you are asking: what did this branch do, or what will merging it do.</p>
+<p>The same baseline rule applies when the score is a model metric or an LLM eval, and a later course on evals starts from there.</p>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">An agent's branch scores 7/10. The tip of <code>main</code> scores 8/10. What can you conclude?</p>
+  <ul class="opts">
+    <li data-correct>Nothing yet; main may have moved</li>
+    <li>The branch made the score worse</li>
+    <li>The eval must be randomly flaky</li>
+    <li>The branch needs deleting right away</li>
+  </ul>
+  <p class="why">If <code>main</code> moved after the branch split, its score includes work the branch never had. Find the merge base first.</p>
+</div>
+<div class="quiz">
+  <p class="q">Which baseline isolates what the agent's branch changed?</p>
+  <ul class="opts">
+    <li data-correct>The eval at the merge base</li>
+    <li>The eval at main's current tip</li>
+    <li>The score in the commit message</li>
+    <li>The eval from last week's release</li>
+  </ul>
+  <p class="why">The merge base is where the branch started. Everything between it and the branch tip is the branch's own work.</p>
+</div>
+<div class="quiz">
+  <p class="q">You want to know what merging will do to <code>main</code> today. Which comparison answers that?</p>
+  <ul class="opts">
+    <li data-correct>Updated branch against main's tip</li>
+    <li>Stale branch against main's tip</li>
+    <li>Stale branch against merge base</li>
+    <li>Merge base against main's tip</li>
+  </ul>
+  <p class="why">After you merge <code>origin/main</code> into the branch, the branch is what <code>main</code> will become. Compare that with <code>main</code> as it is.</p>
+</div>
+<div class="quiz">
+  <p class="q">Why does the eval need to be deterministic for these comparisons?</p>
+  <ul class="opts">
+    <li data-correct>So differences come from code</li>
+    <li>So it runs faster locally</li>
+    <li>So GitHub can cache results</li>
+    <li>So pandas isn't needed anymore</li>
+  </ul>
+  <p class="why">If the same commit could print different scores, you couldn't tell a real change from noise.</p>
+</div>
+<div class="quiz">
+  <p class="q">Why run the merge-base eval in a second worktree?</p>
+  <ul class="opts">
+    <li data-correct>Your branch folder stays untouched</li>
+    <li>Worktrees make Python run faster</li>
+    <li>Git cannot open old commits</li>
+    <li>The eval needs two folders</li>
+  </ul>
+  <p class="why">A worktree is a second folder on the same repository, so you can run old code there without switching your main folder away from the branch.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<h3>Command drills</h3>
+<div class="drill" data-accept="git merge-base main normalize-species || git merge-base normalize-species main">
+  <p class="prompt">Print the merge base of <code>main</code> and <code>normalize-species</code>.</p>
+</div>
+<div class="drill" data-accept="git worktree add ../penguins-lab-baseline -b baseline $(git merge-base main normalize-species) || git worktree add -b baseline ../penguins-lab-baseline $(git merge-base main normalize-species) || git worktree add ../penguins-lab-baseline -b baseline $(git merge-base normalize-species main) || git worktree add -b baseline ../penguins-lab-baseline $(git merge-base normalize-species main)">
+  <p class="prompt">Create a worktree at <code>../penguins-lab-baseline</code>, on a new branch <code>baseline</code>, at the merge base of <code>main</code> and <code>normalize-species</code>.</p>
+</div>
+<div class="drill" data-accept="git worktree remove ../penguins-lab-baseline">
+  <p class="prompt">Remove the worktree at <code>../penguins-lab-baseline</code>.</p>
+</div>
+<div class="drill" data-accept="git branch -d baseline || git branch --delete baseline">
+  <p class="prompt">Safely delete the <code>baseline</code> branch.</p>
+</div>
+
+<div class="primary-source">
+  Re-read the three-dot entry in the <a href="https://git-scm.com/docs/git-diff#Documentation/git-diff.txt-gitdiffoptionscommitcommit--path-1">git-diff reference</a>: "<code>git diff A...B</code> is equivalent to <code>git diff $(git merge-base A B) B</code>." Run 3 against run 2 is that sentence with an eval in place of a diff. Then read the <code>add</code> and <code>-b</code> entries of <a href="https://git-scm.com/docs/git-worktree">git-worktree</a>.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"Run eval_clean.py at the merge base of this branch and main in a temporary worktree, then on this branch. Report both scores and which rows changed. Don't edit any files."</em> When an agent reports a score, ask: <em>"Which commit did your baseline come from?"</em>
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Git reference, <a href="https://git-scm.com/docs/git-merge-base">git-merge-base</a>.</li>
+    <li id="s2">Git reference, <a href="https://git-scm.com/docs/git-worktree#Documentation/git-worktree.txt--bnew-branch">git-worktree</a> (<code>add &lt;path&gt; [&lt;commit-ish&gt;]</code>, <code>-b &lt;new-branch&gt;</code>, <code>remove</code>).</li>
+    <li id="s3">Git reference, <a href="https://git-scm.com/docs/git-diff#Documentation/git-diff.txt-gitdiffoptionscommitcommit--path-1">git-diff (the three-dot form)</a>.</li>
+    <li id="s4">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/branches#three-dot-and-two-dot-git-diff-comparisons">Three-dot and two-dot Git diff comparisons</a> and <a href="https://docs.github.com/en/pull-requests/reference/branches#merging-often">Merging often</a>.</li>
+    <li id="s5">Python docs, <a href="https://docs.python.org/3/library/venv.html#how-venvs-work">venv — How venvs work</a> (activation prepends the environment to your <code>PATH</code>).</li>
+    <li id="s6">Git reference, <a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt--d">git-branch <code>-d</code></a>.</li>
+    <li id="s7">The commands, outputs and four scores on this page were produced by a rehearsal in a scratch copy of <code>penguins-lab</code> (Git 2.52, Python 3.14, pandas 3.0.3; same scores with pandas 2.3.3), with squash merges.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0011-when-main-moves.html">← Lesson 11: When main moves</a>
+  <a href="../index.html">Course home →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+</body>
+</html>

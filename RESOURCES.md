@@ -1,6 +1,6 @@
 # GitHub Branches for Agentic Coding — Resources
 
-Verified fact sheet with quotes and deep links: [research/facts.md](research/facts.md) (retrieved 2026-10-04).
+Verified fact sheet with quotes and deep links: [research/facts.md](research/facts.md) (retrieved 2026-10-04). Part 2 (lessons 10–12): [research/facts-part-2.md](research/facts-part-2.md).
 
 ## Knowledge
 
@@ -22,6 +22,8 @@ Verified fact sheet with quotes and deep links: [research/facts.md](research/fac
   The why behind short-lived branches and healthy mainlines. Use for: CI/CD perspective.
 - [Claude Code docs — Best practices](https://code.claude.com/docs/en/best-practices), [Common workflows](https://code.claude.com/docs/en/common-workflows), [Worktrees](https://code.claude.com/docs/en/worktrees), [Checkpointing](https://code.claude.com/docs/en/checkpointing), [CLI reference](https://code.claude.com/docs/en/cli-reference)
   How Claude Code commits, opens PRs, runs in worktrees (`claude -w`), and why checkpoints don't replace git. Use for: lessons 6–7.
+- [git-merge-base](https://git-scm.com/docs/git-merge-base), [git-diff](https://git-scm.com/docs/git-diff), and GitHub Docs on [three-dot and two-dot diffs](https://docs.github.com/en/pull-requests/reference/branches#three-dot-and-two-dot-git-diff-comparisons) and [keeping a pull request in sync with its base](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch)
+  The merge base, what each diff form compares, and how GitHub handles a branch that is behind its base. Use for: lessons 10–12.
 - [GitHub CLI manual](https://cli.github.com/manual/)
   `gh repo create`, `gh pr create/checks/merge`. Verified against gh 2.100.0.
 - [nbdime docs](https://nbdime.readthedocs.io/en/latest/) and [Jupytext](https://github.com/jupytext/jupytext)

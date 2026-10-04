@@ -59,6 +59,21 @@
   <dd><code>git diff main...feature</code>: only the changes made on <code>feature</code> since it split from <code>main</code> — what a pull request shows.</dd>
 </dl>
 
+<h2 id="judging">Judging a branch</h2>
+<dl class="glossary">
+  <dt id="merge-base">Merge base</dt>
+  <dd>The most recent commit that two branches share: the point where one split from the other. <code>git merge-base main feature</code> prints it (<a href="https://git-scm.com/docs/git-merge-base">git merge-base</a>). <span class="avoid">Avoid: fork point (Git uses that name for something else).</span></dd>
+
+  <dt id="two-dot-diff">Two-dot diff</dt>
+  <dd><code>git diff main..feature</code>: how the tip of <code>main</code> and the tip of <code>feature</code> differ right now, the same as <code>git diff main feature</code>. Work that landed on <code>main</code> after the split shows up reversed.</dd>
+
+  <dt id="stale-branch">Stale branch</dt>
+  <dd>A branch whose merge base with <code>main</code> is no longer the tip of <code>main</code>, because <code>main</code> moved after the branch split or was last updated. Its review and test results describe an older <code>main</code>. <span class="avoid">Avoid: outdated, old branch. GitHub says "behind" or "not up to date with the base branch".</span></dd>
+
+  <dt id="baseline">Baseline</dt>
+  <dd>The score you subtract from a new score to see what changed. To see what a branch did, take the baseline at the merge base. <span class="avoid">Avoid: reference score, control.</span></dd>
+</dl>
+
 <h2 id="remote">Remotes and GitHub</h2>
 <dl class="glossary">
   <dt id="remote-term">Remote (origin)</dt>

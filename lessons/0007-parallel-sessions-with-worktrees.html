@@ -84,7 +84,7 @@ Preparing worktree (new branch 'add-species-plot')
   <li><label><input type="checkbox"> <strong>Terminal 2</strong>, also in <code>penguins-lab</code>: <code>git worktree add ../penguins-lab-plot -b add-species-plot</code>, then <code>cd ../penguins-lab-plot</code>. Create and activate a venv, run <code>pip install -r requirements.txt</code>, then start <code>claude</code>. Ask it for a <code>plot_species(df)</code> function, with the same commit, push, and PR instructions.</label></li>
   <li><label><input type="checkbox"> While both work, run <code>git worktree list</code> from your main folder. Then try <code>git switch add-species-plot</code> and read the refusal.</label></li>
   <li><label><input type="checkbox"> Watch both PRs' checks (<code>gh pr checks --watch</code> in each folder). Squash-merge the first one that's green.</label></li>
-  <li><label><input type="checkbox"> In the other session: "Merge origin/main into this branch, rerun pytest, push." Merge it once CI is green.</label></li>
+  <li><label><input type="checkbox"> In the other session: "Merge origin/main into this branch, rerun pytest, push." Merge it once CI is green.</label> <a href="0011-when-main-moves.html">Lesson 11</a> explains why this step matters.</li>
   <li><label><input type="checkbox"> Clean up. Exit Terminal 1's Claude and choose remove (the branch is already merged). Then <code>git worktree remove ../penguins-lab-plot</code> and <code>git branch -D add-species-plot</code>, and in <code>penguins-lab</code> run <code>git switch main</code> and <code>git pull</code>.</label></li>
 </ol>
 

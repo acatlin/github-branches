@@ -111,6 +111,7 @@ Commit with a descriptive message and open a PR against main. Put "Closes #7" in
   <li>The PR is one logical change from one agent branch. Smaller PRs are easier to review and safer to squash.</li>
   <li>You read the whole <a href="glossary.html#three-dot-diff">three-dot diff</a> (<code>git diff main...HEAD</code> or the PR's <em>Files changed</em> tab), and every changed file is one you expected.</li>
   <li>No secrets (<code>.env</code>, API keys) and no bulky data files were committed. "Never commit API keys or OAuth tokens directly to your repository" (<a href="https://code.claude.com/docs/en/github-actions#protect-your-credentials">docs</a>).</li>
+  <li>The branch is up to date with <code>main</code>: after <code>git fetch</code>, <code>git log --oneline HEAD..origin/main</code> prints nothing. If it is a <a href="glossary.html#stale-branch">stale branch</a>, merge <code>origin/main</code> into it and check again (<a href="../lessons/0011-when-main-moves.html">lesson 11</a>).</li>
   <li>Tests pass locally, and every <a href="glossary.html#status-check">status check</a> on the PR is green.</li>
   <li>The PR description says what changed and why, and links the issue (<code>Closes #N</code>).</li>
   <li>For a second opinion, use a fresh Claude session as reviewer: "A fresh context improves code review" (<a href="https://code.claude.com/docs/en/best-practices#run-multiple-claude-sessions">docs</a>).</li>
