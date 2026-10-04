@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Is a Branch</title>
+<meta name="description" content="Lesson 1: a branch is a movable pointer to a commit — and why that makes it the perfect sandbox for an AI coding agent.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 1 of 9 · about 15 minutes</p>
+<h1>What is a branch?</h1>
+<p class="subtitle">A sticky note on a commit — and the cheapest safety net you will ever own.</p>
+
+<div class="win">You will be able to explain what a branch really is, and use one in a simulator to keep <code>main</code> untouched while you experiment.</div>
+
+<h2>The problem branches solve</h2>
+<p>Picture this. You ask Claude Code to "refactor the cleaning code in <code>clean.py</code> and speed up the penguins notebook." It edits six files and makes three commits. The plots now look wrong, and every one of those commits went straight onto <code>main</code>, the branch your teammates (and your future self) trust. Undoing it means picking through history by hand.</p>
+<p>A branch fixes this before it starts: the agent works <em>beside</em> <code>main</code>, not on it. If the work is good, you bring it in. If not, you throw the branch away and <code>main</code> never knew. GitHub describes branches as a way to "develop features, fix bugs, or safely experiment with new ideas in a contained area of your repository."<a class="cite" href="#s2">2</a></p>
+
+<h2>A branch is just a pointer</h2>
+<p>You already know commits: snapshots of your project, each pointing back to the one before it. A branch is not a copy of your files. The Pro Git book puts it this way: a branch is "simply a lightweight movable pointer to one of these commits."<a class="cite" href="#s1">1</a></p>
+
+<figure>
+  <svg viewBox="0 0 560 170" role="img" aria-label="Three commits on main; a new branch clean-data points at the same commit as main, then moves forward when a commit is made on it.">
+    <line x1="60" y1="60" x2="300" y2="60" class="main-line" stroke-width="3"/>
+    <path d="M300 60 C350 60 370 120 420 120" class="feat-line" stroke-width="3" fill="none"/>
+    <circle cx="60" cy="60" r="10" class="main-fill"/>
+    <circle cx="180" cy="60" r="10" class="main-fill"/>
+    <circle cx="300" cy="60" r="10" class="main-fill"/>
+    <circle cx="420" cy="120" r="10" class="feat-fill"/>
+    <text x="60" y="38" text-anchor="middle">load data</text>
+    <text x="180" y="38" text-anchor="middle">explore</text>
+    <text x="300" y="38" text-anchor="middle">plot species</text>
+    <text x="420" y="98" text-anchor="middle">drop NaNs</text>
+    <text x="300" y="88" text-anchor="middle" font-weight="600">main</text>
+    <text x="420" y="148" text-anchor="middle" font-weight="600">HEAD → clean-data</text>
+  </svg>
+  <figcaption>Creating <code>clean-data</code> made a new pointer at "plot species." Committing on it moved only that pointer. <code>main</code> stayed put.</figcaption>
+</figure>
+
+<p>Three consequences matter for everything that follows:</p>
+<ul>
+  <li><strong>Branches are nearly free.</strong> A branch is a small file holding a commit hash. Creating one is "as quick and simple as writing 41 bytes to a file."<a class="cite" href="#s1">1</a> Make them freely, one per task.</li>
+  <li><strong>Committing moves only the current branch.</strong> Every other branch, <code>main</code> included, keeps pointing where it was.</li>
+  <li><strong>Git always knows where you are.</strong> A special pointer called <code>HEAD</code> is "a pointer to the local branch you're currently on."<a class="cite" href="#s1">1</a> The next commit moves whichever branch <code>HEAD</code> names.</li>
+</ul>
+
+<p class="note">On GitHub, new repositories call their default branch <code>main</code>.<a class="cite" href="#s2">2</a> Plain <code>git init</code> on your laptop may still call it <code>master</code> until Git 3.0.<a class="cite" href="#s3">3</a> They are the same idea. This course always says <code>main</code>.</p>
+
+<h2>Try it: protect main in the simulator</h2>
+<p>The simulator below is a tiny git that draws its commit graph. <code>main</code> already has two commits. Type the commands into the terminal line. Up-arrow recalls the previous command, and <code>help</code> lists what's supported. You only need two new commands:</p>
+<pre><code><span class="p">$ </span>git branch clean-data   <span class="c"># create a pointer here (does NOT move you)</span>
+<span class="p">$ </span>git switch clean-data   <span class="c"># move HEAD onto it</span></code></pre>
+<div class="sim" id="sim1"></div>
+<p>Look at the graph after the last task. Your two commits sit on the <code>clean-data</code> lane, and the <code>main</code> label never moved. That is the whole safety net.</p>
+
+<h2>Check yourself</h2>
+<p>Answer from memory. Retrieval is what makes it stick.</p>
+<div class="quiz">
+  <p class="q">What does Git actually do when you create a new branch?</p>
+  <ul class="opts">
+    <li data-correct>Writes one small pointer file</li>
+    <li>Copies every project file over</li>
+    <li>Uploads a copy to GitHub</li>
+    <li>Freezes main until you merge</li>
+  </ul>
+  <p class="why">A branch is a tiny file holding one commit hash. No files are copied, nothing goes to GitHub, and <code>main</code> is unaffected.</p>
+</div>
+<div class="quiz">
+  <p class="q">You are on <code>clean-data</code> and you make a commit. Which pointer moves?</p>
+  <ul class="opts">
+    <li data-correct>Only clean-data moves forward</li>
+    <li>Only main moves forward</li>
+    <li>Both branches move forward</li>
+    <li>Neither branch moves forward</li>
+  </ul>
+  <p class="why">HEAD names <code>clean-data</code>, so only that pointer advances to the new commit. That is exactly why agent work on a branch can't disturb <code>main</code>.</p>
+</div>
+<div class="quiz">
+  <p class="q">What does <code>HEAD</code> point to?</p>
+  <ul class="opts">
+    <li data-correct>the branch you are on</li>
+    <li>the newest commit on GitHub</li>
+    <li>the first commit ever made</li>
+    <li>the branch named main always</li>
+  </ul>
+  <p class="why">HEAD is "a pointer to the local branch you're currently on." Switching branches moves HEAD.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<h2>Why this matters for agentic coding</h2>
+<p>Claude Code can edit many files quickly. A branch per task gives that speed somewhere safe to land. In later lessons we'll call this an <a href="../reference/glossary.html#agent-branch">agent branch</a>: the agent commits there, you review the result as a pull request, CI tests it, and only then does it reach <code>main</code>.</p>
+
+<div class="primary-source">
+  Read <a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell">Pro Git §3.1, "Branches in a Nutshell"</a>. It has clear diagrams of exactly what you just did, and is the source this whole course builds on (about 10 minutes).
+</div>
+
+<div class="ask-agent">
+  Anything fuzzy? Ask Claude: <em>"Explain the difference between a branch and a commit using my penguins project as the example,"</em> or <em>"What happens to HEAD when I switch branches?"</em> Your teacher is one prompt away.
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Chacon &amp; Straub, <a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell"><em>Pro Git</em>, §3.1 Branches in a Nutshell</a>.</li>
+    <li id="s2">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/branches">Branches</a> (about branches; about the default branch).</li>
+    <li id="s3">Git reference, <a href="https://git-scm.com/docs/git-init">git-init</a> (default initial branch name).</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="../index.html">← Course home</a>
+  <a href="0002-create-and-switch.html">Lesson 2: Create, switch, compare →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/branch-sim.js"></script>
+<script>
+  BranchSim.mount(document.getElementById("sim1"), {
+    setup: ["git commit -m 'load penguins.csv'", "git commit -m 'explore species counts'"],
+    tasks: [
+      { text: "Create a branch called <code>clean-data</code>.", check: (s) => "clean-data" in s.branches },
+      { text: "Switch to <code>clean-data</code>.", check: (s) => s.head === "clean-data" },
+      { text: "Make two commits on it (<code>git commit -m \"drop NaNs\"</code>, then another).", check: (s) => s.ahead("clean-data", "main") >= 2 },
+      { text: "Switch back to <code>main</code> and confirm it didn't move.", check: (s) => s.head === "main" && s.ahead("clean-data", "main") >= 2 },
+    ],
+  });
+</script>
+</body>
+</html>

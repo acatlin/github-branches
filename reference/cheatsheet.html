@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Branch Cheat Sheet</title>
+<meta name="description" content="Every git and gh command used in the GitHub Branches for Agentic Coding course, grouped by task.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="glossary.html">Glossary</a> · <a href="cheatsheet.html">Cheat sheet</a> · <a href="claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Reference</p>
+<h1>Branch cheat sheet</h1>
+<p class="subtitle">The commands from the course, grouped by what you are trying to do. Git 2.56 · gh 2.100.</p>
+
+<p class="note"><strong>GitHub flow</strong>: create a branch → make changes → create a pull request → address review comments → merge your pull request → delete your branch (<a href="https://docs.github.com/en/get-started/using-github/github-flow#following-github-flow">GitHub Docs</a>).</p>
+
+<h2 id="where">See where you are</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git status</code></td><td>Current branch, whether it is ahead of its <a href="glossary.html#upstream">upstream</a>, uncommitted changes.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git branch</code></td><td>List local branches; <code>*</code> marks the one <a href="glossary.html#head">HEAD</a> is on.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git branch -vv</code></td><td>Each branch's last commit, its upstream, and ahead/behind counts (<a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt--v">docs</a>).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>git branch -a</code></td><td>Local <em>and</em> <a href="glossary.html#remote-tracking-branch">remote-tracking branches</a> (<code>origin/…</code>).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>git log --oneline --graph --all</code></td><td>The whole commit graph, one line per commit, with branch labels.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="create">Create &amp; switch</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git switch -c NAME</code></td><td>Create a branch at the current commit <em>and</em> switch to it — the everyday command (<a href="https://git-scm.com/docs/git-switch">docs</a>).</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git switch NAME</code></td><td>Move HEAD to an existing branch; the <a href="glossary.html#working-tree">working tree</a> is updated to match.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git switch -</code></td><td>Jump back to the previous branch.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git branch NAME</code></td><td>Create a branch but <em>stay</em> where you are.</td><td><a href="../lessons/0001-what-is-a-branch.html">1</a></td></tr>
+    <tr><td><code>git checkout -b NAME</code></td><td>Older equivalent of <code>switch -c</code>; you will see it in tutorials and agent output.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="compare">Compare</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git diff main...feature</code></td><td><a href="glossary.html#three-dot-diff">Three-dot diff</a>: only what <code>feature</code> changed since it left <code>main</code> — what a PR shows (<a href="https://git-scm.com/docs/git-diff">docs</a>).</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git log --oneline main..feature</code></td><td>Commits on <code>feature</code> that are not on <code>main</code>.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>gh pr diff</code> · <code>--name-only</code></td><td>The current branch's PR diff, or just the changed file names.</td><td><a href="../lessons/0006-claude-code-on-a-branch.html">6</a></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="merge">Merge &amp; clean up</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git merge NAME</code></td><td>Bring NAME into the current branch: <a href="glossary.html#fast-forward">fast-forward</a> if possible, otherwise a <a href="glossary.html#merge-commit">merge commit</a> (<a href="https://git-scm.com/docs/git-merge">docs</a>).</td><td><a href="../lessons/0003-merge-and-clean-up.html">3</a></td></tr>
+    <tr><td><code>git merge --no-ff NAME</code></td><td>Always create a merge commit (what GitHub's "Create a merge commit" does).</td><td><a href="../lessons/0003-merge-and-clean-up.html">3</a></td></tr>
+    <tr><td><code>git merge --abort</code></td><td>Mid-conflict: give up and restore the pre-merge state.</td><td><a href="../lessons/0003-merge-and-clean-up.html">3</a></td></tr>
+    <tr><td><code>git branch -d NAME</code></td><td>Delete a branch — refused unless it is fully merged (safe).</td><td><a href="../lessons/0003-merge-and-clean-up.html">3</a></td></tr>
+    <tr><td><code>git branch -D NAME</code></td><td>Force-delete, merged or not — throws the work away.</td><td><a href="../lessons/0003-merge-and-clean-up.html">3</a></td></tr>
+    <tr><td><code>git push origin --delete NAME</code></td><td>Delete the branch on GitHub (removes the pointer only).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>git branch --delete-merged PATTERN</code></td><td>New in Git 2.56: delete local branches already merged into their upstream (<a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt---delete-mergedpattern">docs</a>).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+  </tbody>
+</table></div>
+
+<h3>Conflict markers</h3>
+<pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+df = df.dropna()            <span class="c"># your side (current branch)</span>
+=======
+df = df.dropna(subset=cols) <span class="c"># their side (branch being merged)</span>
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; clean-data</code></pre>
+<p class="note">Edit into the version you want, delete all three marker lines, then <code>git add FILE</code> and <code>git commit</code> (or <code>git merge --continue</code>) (<a href="https://git-scm.com/docs/git-merge#_how_to_resolve_conflicts">docs</a>).</p>
+
+<h2 id="remotes">Remotes</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git push -u origin NAME</code></td><td>Publish a new branch and set its <a href="glossary.html#upstream">upstream</a> (<a href="https://git-scm.com/docs/git-push#Documentation/git-push.txt---set-upstream">docs</a>).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>git push</code></td><td>Push the current branch to its upstream (after <code>-u</code>).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>git fetch</code></td><td>Download new commits and move <code>origin/…</code> pointers; never touches your files.</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>git pull</code></td><td><code>git fetch</code> then merge the upstream into the current branch.</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="prs">Pull requests with gh</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>gh repo create NAME --public --clone --add-readme</code></td><td>New GitHub repo with a first commit, cloned locally.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>gh pr create --fill</code></td><td>Open a PR from the current branch, title/body from commits. Add <code>--draft</code>, <code>--base</code>, <code>--title</code>, <code>--body</code> as needed (<a href="https://cli.github.com/manual/gh_pr_create">manual</a>).</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>gh pr view --web</code></td><td>Open the PR in your browser.</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+    <tr><td><code>gh pr checks --watch</code></td><td>Watch the PR's <a href="glossary.html#status-check">status checks</a> until they finish.</td><td><a href="../lessons/0005-ci-cd-and-branches.html">5</a></td></tr>
+    <tr><td><code>gh pr merge --squash --delete-branch</code></td><td><a href="glossary.html#squash-merge">Squash merge</a> and delete the branch locally and on GitHub. Alternatives: <code>--merge</code>, <code>--rebase</code>; <code>--auto</code> merges once requirements pass.</td><td><a href="../lessons/0004-push-and-pull-requests.html">4</a></td></tr>
+  </tbody>
+</table></div>
+<p class="note">Write <code>Closes #12</code> in the PR body to close issue 12 on merge — only works when the PR targets the default branch (<a href="https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue">GitHub Docs</a>).</p>
+
+<h2 id="worktrees">Worktrees (parallel sessions)</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git worktree add ../proj-a -b feature-a</code></td><td>New folder with a new branch checked out, sharing the same repository (<a href="https://git-scm.com/docs/git-worktree">docs</a>).</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+    <tr><td><code>git worktree list</code></td><td>Main worktree first, then linked ones with their branches.</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+    <tr><td><code>git worktree remove ../proj-a</code></td><td>Remove a clean worktree (<code>--force</code> if it has changes).</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+    <tr><td><code>git worktree prune</code></td><td>Clean up records of worktrees whose folders are gone.</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+    <tr><td><code>claude -w NAME</code></td><td>Start Claude Code in <code>.claude/worktrees/NAME/</code> on new branch <code>worktree-NAME</code> (<a href="https://code.claude.com/docs/en/worktrees#start-claude-in-a-worktree">docs</a>).</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+    <tr><td><code>claude --worktree NAME --resume</code></td><td>Return to a kept worktree session.</td><td><a href="../lessons/0007-parallel-sessions-with-worktrees.html">7</a></td></tr>
+  </tbody>
+</table></div>
+<p class="note">A branch can be checked out in only one worktree at a time.</p>
+
+<h2 id="escape">Escape hatches</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Command</th><th>What it does</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr><td><code>git stash</code> (<code>-u</code> for untracked)</td><td>Shelve uncommitted changes to get a clean working tree (<a href="https://git-scm.com/docs/git-stash">docs</a>).</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git stash pop</code></td><td>Re-apply the latest stash and drop it from the list.</td><td><a href="../lessons/0002-create-and-switch.html">2</a></td></tr>
+    <tr><td><code>git restore FILE</code></td><td>Discard uncommitted edits to FILE (<a href="https://git-scm.com/docs/git-restore">docs</a>).</td><td><a href="../lessons/0006-claude-code-on-a-branch.html">6</a></td></tr>
+    <tr><td><code>git restore --staged FILE</code></td><td>Unstage FILE, keeping the edits.</td><td><a href="../lessons/0006-claude-code-on-a-branch.html">6</a></td></tr>
+  </tbody>
+</table></div>
+</main>
+<footer class="site-footer">Part of <a href="../index.html">GitHub Branches for Agentic Coding</a>. Sources: <a href="https://git-scm.com/docs">git-scm.com/docs</a>, <a href="https://cli.github.com/manual/">gh manual</a>, <a href="https://code.claude.com/docs/en/worktrees">Claude Code docs</a>; retrieved October 2026.</footer>
+<script src="../assets/course.js"></script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel Sessions with Worktrees</title>
+<meta name="description" content="Lesson 7: run two Claude Code sessions side by side, each in its own git worktree on its own branch, with claude -w or git worktree.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 7 of 9 · about 15 minutes</p>
+<h1>Parallel sessions with worktrees</h1>
+<p class="subtitle">One repository, several folders, one branch each, so two agents never trip over each other.</p>
+
+<div class="win">You will run two Claude Code sessions at the same time on two branches, one started with <code>claude -w</code> and one with <code>git worktree add</code>, and clean both up afterwards.</div>
+
+<h2>Why one folder isn't enough</h2>
+<p>Your <code>penguins-lab</code> folder is a single <a href="../reference/glossary.html#working-tree">working tree</a>, and it can have only one branch checked out at a time. Say one Claude session is working on <code>add-species-plot</code> and you <code>git switch</code> the folder to another branch for a second task. Now the first session's files change underneath it. If you skip the switch and run both sessions in the same folder, they edit the same files on the same branch. Either way the work collides.</p>
+<p>The fix is a <a href="../reference/glossary.html#worktree">worktree</a>: an extra folder attached to the <em>same</em> repository, with its own branch checked out. Git calls this managing "multiple working trees attached to the same repository." All worktrees share commits and branches, and each has its own <code>HEAD</code> and index.<a class="cite" href="#s1">1</a> Claude Code's best-practices guide recommends worktrees for exactly this: "run separate CLI sessions in isolated git checkouts so edits don't collide."<a class="cite" href="#s3">3</a></p>
+
+<figure>
+  <svg viewBox="0 0 584 250" role="img" aria-label="One repository on the left shares its commits with three folders on the right: the main checkout on main, a worktree on add-species-plot, and a Claude worktree on worktree-add-summary-stats, each with its own session.">
+    <rect x="16" y="95" width="160" height="62" rx="4" class="surface-fill rule-line" stroke-width="1.5"/>
+    <text x="96" y="120" text-anchor="middle" class="label" font-weight="600">one repository</text>
+    <text x="96" y="140" text-anchor="middle" class="muted-fill">commits + branches</text>
+    <path d="M176 126 C230 126 230 45 280 45" class="main-line" stroke-width="3" fill="none"/>
+    <path d="M176 126 L280 126" class="feat-line" stroke-width="3" fill="none"/>
+    <path d="M176 126 C230 126 230 207 280 207" class="feat2-line" stroke-width="3" fill="none"/>
+    <rect x="280" y="16" width="292" height="58" rx="4" class="bg-fill main-line" stroke-width="2"/>
+    <text x="292" y="38">penguins-lab/</text>
+    <text x="292" y="60" class="muted-fill">branch main · you</text>
+    <rect x="280" y="97" width="292" height="58" rx="4" class="bg-fill feat-line" stroke-width="2"/>
+    <text x="292" y="119">../penguins-lab-plot/</text>
+    <text x="292" y="141" class="muted-fill">branch add-species-plot · Claude #1</text>
+    <rect x="280" y="178" width="292" height="58" rx="4" class="bg-fill feat2-line" stroke-width="2"/>
+    <text x="292" y="200">.claude/worktrees/add-summary-stats/</text>
+    <text x="292" y="222" class="muted-fill">worktree-add-summary-stats · Claude #2</text>
+  </svg>
+  <figcaption>Three folders, three branches, one shared history. A commit made in any folder is visible to the others straight away, because there is only one repository.</figcaption>
+</figure>
+
+<h2>Plain git: <code>git worktree</code></h2>
+<pre><code><span class="p">$ </span>git worktree add ../penguins-lab-plot -b add-species-plot
+Preparing worktree (new branch 'add-species-plot')
+<span class="p">$ </span>git worktree list
+…/penguins-lab       a7004ec [main]
+…/penguins-lab-plot  a7004ec [add-species-plot]
+<span class="p">$ </span>cd ../penguins-lab-plot
+<span class="p">$ </span>claude                        <span class="c"># this session lives on add-species-plot</span></code></pre>
+<p><code>add &lt;path&gt; -b &lt;branch&gt;</code> creates the folder and a new branch in one step. <code>list</code> shows the main worktree first, then the linked ones, each with its branch.<a class="cite" href="#s1">1</a> When you're done, <code>git worktree remove ../penguins-lab-plot</code> deletes the folder. "Only clean worktrees … can be removed" unless you add <code>--force</code>, and the main worktree can never be removed.<a class="cite" href="#s1">1</a> Removing a worktree <strong>keeps its branch</strong>, so delete the branch separately.</p>
+
+<p class="warn">A branch can be checked out in only one worktree at a time.<a class="cite" href="#s1">1</a> If you try <code>git switch add-species-plot</code> in your main folder while the worktree has it, Git stops you: <code>fatal: 'add-species-plot' is already used by worktree at '…/penguins-lab-plot'</code>. That isn't a bug. It's the guarantee that keeps two sessions apart.</p>
+
+<h2>The Claude Code shortcut: <code>claude -w</code></h2>
+<p>Claude Code can create the worktree for you. <code>claude -w add-summary-stats</code> (long form <code>--worktree</code>) makes the folder under <code>.claude/worktrees/add-summary-stats/</code> "on a new branch named <code>worktree-&lt;name&gt;</code>", here <code>worktree-add-summary-stats</code>, and starts Claude inside it.<a class="cite" href="#s2">2</a> Things to know:</p>
+<ul>
+  <li><strong>What it branches from.</strong> By default (<code>worktree.baseRef: "fresh"</code>) it branches from the repository's default branch on the remote, usually <code>main</code>. Set it to <code>"head"</code> to branch from your current local HEAD instead.<a class="cite" href="#s2">2</a></li>
+  <li><strong>Needs a commit.</strong> "The repository needs at least one commit first." In an empty repository the command fails.<a class="cite" href="#s4">4</a></li>
+  <li><strong>Ignore the folder.</strong> "Add <code>.claude/worktrees/</code> to your <code>.gitignore</code>." Otherwise worktree contents show up as untracked files in your main checkout.<a class="cite" href="#s2">2</a></li>
+  <li><strong>Cleanup on exit.</strong> If the worktree has no changes, it is removed automatically. If it has changes or commits, Claude asks whether to keep or remove it, and "Removing deletes the worktree directory and its branch, along with all the work in them." <strong>Push your branch before you choose remove.</strong> Pick the session up again later with <code>claude --worktree &lt;name&gt; --resume</code>.<a class="cite" href="#s2">2</a></li>
+  <li><strong>Mid-session.</strong> You can also just ask Claude to "work in a worktree."<a class="cite" href="#s2">2</a> In a worktree session, Claude Code blocks edits to your main checkout.<a class="cite" href="#s2">2</a></li>
+</ul>
+
+<h2>Data-science gotcha: every worktree needs its own environment</h2>
+<p>A worktree is a fresh checkout, so install dependencies there.<a class="cite" href="#s2">2</a> Your <code>.venv</code> folder is gitignored, and virtual environments "should not be checked into source control" and are "disposable," so you recreate one rather than copying it.<a class="cite" href="#s5">5</a> In each new worktree:</p>
+<pre><code><span class="p">$ </span>python -m venv .venv
+<span class="p">$ </span>source .venv/bin/activate        <span class="c"># Windows PowerShell: .venv\Scripts\Activate.ps1</span>
+<span class="p">$ </span>pip install -r requirements.txt</code></pre>
+<p>Gitignored files such as <code>.env</code> (API keys, database URLs) aren't copied into a new worktree either. List them in a <code>.worktreeinclude</code> file (gitignore syntax) and <code>claude -w</code> copies them in for you.<a class="cite" href="#s2">2</a></p>
+
+<h2>From two worktrees to two pull requests</h2>
+<p>Each worktree's branch is an ordinary <a href="../reference/glossary.html#feature-branch">feature branch</a>. Push it, open its own pull request, and CI checks each one separately (lessons 4–5). Merge whichever finishes first. The second pull request may now be behind <code>main</code>. GitHub recommends merging the base branch into your topic branch frequently,<a class="cite" href="#s6">6</a> so ask that session's Claude to merge <code>main</code> in and rerun <code>pytest</code>.</p>
+<p class="note">Cleanup after a <a href="../reference/glossary.html#squash-merge">squash merge</a>: the branch's original commits never land on <code>main</code>, only the squashed copy does. So <code>git branch -d add-species-plot</code> refuses ("not fully merged"). Once you've confirmed the pull request merged on GitHub, <code>git branch -D</code> is safe.<a class="cite" href="#s7">7</a></p>
+
+<h2>Do it for real</h2>
+<ol class="steps" data-key="l7">
+  <li><label><input type="checkbox"> Land a quick PR that adds <code>.claude/worktrees/</code> to <code>.gitignore</code> (the lesson 4 loop).</label></li>
+  <li><label><input type="checkbox"> <strong>Terminal 1</strong>, in <code>penguins-lab</code>: run <code>claude -w add-summary-stats</code>. First ask it to set up <code>.venv</code> and install <code>requirements.txt</code>. Then: "Add <code>summary_stats(df)</code> returning mean bill length per species, with a test. Commit, push, and open a PR."</label></li>
+  <li><label><input type="checkbox"> <strong>Terminal 2</strong>, also in <code>penguins-lab</code>: <code>git worktree add ../penguins-lab-plot -b add-species-plot</code>, then <code>cd ../penguins-lab-plot</code>. Create and activate a venv, run <code>pip install -r requirements.txt</code>, then start <code>claude</code>. Ask it for a <code>plot_species(df)</code> function, with the same commit, push, and PR instructions.</label></li>
+  <li><label><input type="checkbox"> While both work, run <code>git worktree list</code> from your main folder. Then try <code>git switch add-species-plot</code> and read the refusal.</label></li>
+  <li><label><input type="checkbox"> Watch both PRs' checks (<code>gh pr checks --watch</code> in each folder). Squash-merge the first one that's green.</label></li>
+  <li><label><input type="checkbox"> In the other session: "Merge origin/main into this branch, rerun pytest, push." Merge it once CI is green.</label></li>
+  <li><label><input type="checkbox"> Clean up. Exit Terminal 1's Claude and choose remove (the branch is already merged). Then <code>git worktree remove ../penguins-lab-plot</code> and <code>git branch -D add-species-plot</code>, and in <code>penguins-lab</code> run <code>git switch main</code> and <code>git pull</code>.</label></li>
+</ol>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">Why not run two Claude sessions on different branches in the same folder?</p>
+  <ul class="opts">
+    <li data-correct>One folder holds one checkout</li>
+    <li>Git forbids two Claude processes</li>
+    <li>Branches cannot share one repository</li>
+    <li>GitHub blocks parallel pull requests</li>
+  </ul>
+  <p class="why">A working tree has exactly one branch checked out. Switching it pulls the files out from under the other session. Worktrees give each session its own folder.</p>
+</div>
+<div class="quiz">
+  <p class="q">Which branch does <code>claude -w add-summary-stats</code> create?</p>
+  <ul class="opts">
+    <li data-correct><code>worktree-add-summary-stats</code></li>
+    <li><code>claude/add-summary-stats</code></li>
+    <li><code>feature/add-summary-stats</code></li>
+    <li><code>main-add-summary-stats-wt</code></li>
+  </ul>
+  <p class="why">The worktree goes in <code>.claude/worktrees/add-summary-stats/</code> on a new branch named <code>worktree-&lt;name&gt;</code>.</p>
+</div>
+<div class="quiz">
+  <p class="q"><code>add-species-plot</code> is checked out in a worktree. In your main folder you run <code>git switch add-species-plot</code>. What happens?</p>
+  <ul class="opts">
+    <li data-correct>Git refuses: branch already checked out</li>
+    <li>Git switches and copies the files</li>
+    <li>Both folders switch to that branch</li>
+    <li>The worktree gets deleted without warning</li>
+  </ul>
+  <p class="why">A branch can be checked out in only one worktree at a time. Git says it "is already used by worktree at …".</p>
+</div>
+<div class="quiz">
+  <p class="q">In a brand-new worktree, <code>pytest</code> fails with <code>ModuleNotFoundError: pandas</code>. Most likely cause?</p>
+  <ul class="opts">
+    <li data-correct>New checkout needs its own environment</li>
+    <li>Worktrees cannot run Python test suites</li>
+    <li>Git deleted pandas from the repository</li>
+    <li>Claude uninstalled pandas in main checkout</li>
+  </ul>
+  <p class="why">A worktree is a fresh checkout and your gitignored <code>.venv</code> isn't in it. Create a venv and <code>pip install -r requirements.txt</code> there.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<h3>Command drills</h3>
+<div class="drill" data-accept="git worktree add ../penguins-lab-plot -b add-species-plot || git worktree add -b add-species-plot ../penguins-lab-plot">
+  <p class="prompt">Create a worktree at <code>../penguins-lab-plot</code> on a new branch <code>add-species-plot</code>.</p>
+</div>
+<div class="drill" data-accept="git worktree list">
+  <p class="prompt">Show every worktree attached to this repository and its branch.</p>
+</div>
+<div class="drill" data-accept="git worktree remove ../penguins-lab-plot">
+  <p class="prompt">Remove the (clean) worktree at <code>../penguins-lab-plot</code>.</p>
+</div>
+<div class="drill" data-accept="claude -w add-summary-stats || claude --worktree add-summary-stats">
+  <p class="prompt">Start Claude Code in a new isolated worktree named <code>add-summary-stats</code>.</p>
+</div>
+
+<div class="primary-source">
+  Read <a href="https://code.claude.com/docs/en/worktrees">Run parallel sessions with worktrees</a> in the Claude Code docs. It covers base branches, <code>.worktreeinclude</code>, cleanup, and subagents with <code>isolation: worktree</code> (about 10 minutes). For the underlying git, see <a href="https://git-scm.com/docs/git-worktree">git-worktree</a>.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"Which of my worktrees have unpushed commits?"</em> or <em>"I want to split this feature into two parallel tasks. Suggest the branches and worktrees."</em> Treat it as a planning partner, not just a coder.
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Git reference, <a href="https://git-scm.com/docs/git-worktree">git-worktree</a> (add, list, remove; one branch per worktree). Behaviour and messages also verified locally with Git 2.52.</li>
+    <li id="s2">Claude Code docs, <a href="https://code.claude.com/docs/en/worktrees">Run parallel sessions with worktrees</a> (start, base branch, <code>.worktreeinclude</code>, cleanup, isolation).</li>
+    <li id="s3">Claude Code docs, <a href="https://code.claude.com/docs/en/best-practices#run-multiple-claude-sessions">Best practices — Run multiple Claude sessions</a>.</li>
+    <li id="s4">Claude Code docs, <a href="https://code.claude.com/docs/en/common-workflows#run-parallel-sessions-with-worktrees">Common workflows — Run parallel sessions with worktrees</a>; <a href="https://code.claude.com/docs/en/cli-reference">CLI reference</a> (<code>--worktree</code>, <code>-w</code>).</li>
+    <li id="s5">Python docs, <a href="https://docs.python.org/3/library/venv.html">venv — Creation of virtual environments</a>.</li>
+    <li id="s6">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/branches#merging-often">Branches — Merging often</a>.</li>
+    <li id="s7">Git reference, <a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt--d">git-branch</a> (<code>-d</code> requires fully merged; <code>-D</code> forces).</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0006-claude-code-on-a-branch.html">← Lesson 6: Claude Code on a branch</a>
+  <a href="0008-notebooks-and-branches.html">Lesson 8: Notebooks and branches →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+</body>
+</html>

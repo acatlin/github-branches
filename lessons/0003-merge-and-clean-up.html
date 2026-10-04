@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merge and Clean Up</title>
+<meta name="description" content="Lesson 3: fast-forward merges, merge commits, deleting branches safely, and resolving your first merge conflict.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 3 of 9 · about 15 minutes</p>
+<h1>Merge and clean up</h1>
+<p class="subtitle">Bringing a branch home, then throwing away the pointer.</p>
+
+<div class="win">You will merge a branch into <code>main</code>, recognise a fast-forward versus a merge commit, delete branches safely, and resolve a real merge conflict.</div>
+
+<h2>Two kinds of merge</h2>
+<p>A <a href="../reference/glossary.html#merge">merge</a> brings another branch's commits into the branch you are on. You always merge <em>into</em> <code>HEAD</code>, so first switch to the branch that should receive the work (usually <code>main</code>), then run <code>git merge &lt;branch&gt;</code>.<a class="cite" href="#s2">2</a></p>
+
+<figure>
+  <svg viewBox="0 0 560 230" role="img" aria-label="Top: a fast-forward merge simply moves the main pointer forward to the branch tip. Bottom: when both branches have new commits, a merge commit with two parents joins them.">
+    <text x="10" y="20" class="label" font-weight="600">Fast-forward: main hasn't moved</text>
+    <line x1="40" y1="55" x2="360" y2="55" class="main-line" stroke-width="3"/>
+    <circle cx="40" cy="55" r="9" class="main-fill"/>
+    <circle cx="140" cy="55" r="9" class="main-fill"/>
+    <circle cx="250" cy="55" r="9" class="feat-fill"/>
+    <circle cx="360" cy="55" r="9" class="feat-fill"/>
+    <text x="140" y="82" text-anchor="middle" class="muted-fill">main (before)</text>
+    <text x="360" y="82" text-anchor="middle" font-weight="600">main, add-cleaning</text>
+    <text x="10" y="125" class="label" font-weight="600">Merge commit: both sides moved</text>
+    <line x1="40" y1="160" x2="440" y2="160" class="main-line" stroke-width="3"/>
+    <path d="M140 160 C180 160 200 205 240 205 L330 205 C380 205 400 160 440 160" class="feat-line" stroke-width="3" fill="none"/>
+    <circle cx="40" cy="160" r="9" class="main-fill"/>
+    <circle cx="140" cy="160" r="9" class="main-fill"/>
+    <circle cx="290" cy="160" r="9" class="main-fill"/>
+    <circle cx="240" cy="205" r="9" class="feat-fill"/>
+    <circle cx="330" cy="205" r="9" class="feat-fill"/>
+    <circle cx="440" cy="160" r="11" class="main-fill"/>
+    <text x="440" y="138" text-anchor="middle" font-weight="600">main</text>
+    <text x="440" y="190" text-anchor="middle" class="muted-fill">merge commit</text>
+    <text x="330" y="228" text-anchor="middle">add-plot</text>
+  </svg>
+  <figcaption>Top: Git slides <code>main</code> forward. Bottom: Git creates a new commit with two parents.</figcaption>
+</figure>
+
+<ul>
+  <li><strong><a href="../reference/glossary.html#fast-forward">Fast-forward</a>.</strong> If <code>main</code> hasn't moved since the branch started, there's nothing to combine. Git just moves the pointer, "because there is no divergent work to merge together — this is called a 'fast-forward.'"<a class="cite" href="#s1">1</a></li>
+  <li><strong><a href="../reference/glossary.html#merge-commit">Merge commit</a>.</strong> If both branches gained commits, Git does a three-way merge using the two branch tips and their common ancestor. The result "is referred to as a merge commit, and is special in that it has more than one parent."<a class="cite" href="#s1">1</a></li>
+</ul>
+<p><code>git merge --no-ff &lt;branch&gt;</code> means "Create a merge commit in all cases," even when a fast-forward was possible.<a class="cite" href="#s2">2</a> GitHub's default <strong>Merge pull request</strong> button does exactly this.<a class="cite" href="#s5">5</a> You'll meet it in lesson 4.</p>
+
+<h2>Deleting a branch is deleting a pointer</h2>
+<p>Once a branch is merged, its commits live on in <code>main</code>. The branch is just a leftover label, so delete it with <code>git branch -d &lt;branch&gt;</code>.<a class="cite" href="#s1">1</a> The lowercase <code>-d</code> is the safe version. The branch "must be fully merged," and if it isn't, Git refuses:<a class="cite" href="#s3">3</a></p>
+<pre><code><span class="p">$ </span>git branch -d try-polars
+error: the branch 'try-polars' is not fully merged
+hint: If you are sure you want to delete it, run 'git branch -D try-polars'</code></pre>
+<p>Uppercase <code>-D</code> ("<code>--delete --force</code>") deletes it anyway.<a class="cite" href="#s3">3</a> That's the right move for a failed experiment, such as an agent attempt you've decided to abandon, but it throws those commits away. Read the error before reaching for <code>-D</code>.</p>
+
+<h2>Try it: one fast-forward, one merge commit</h2>
+<p><code>main</code> has two commits, and <code>add-cleaning</code> is one commit ahead. Watch which tasks move a pointer and which create a new commit.</p>
+<div class="sim" id="sim3"></div>
+<p>Compare the two merges in the terminal output: <code>Fast-forward</code> versus <code>Merge made by the 'ort' strategy</code>. Then compare the graph. Only the second merge drew a new node with two incoming lines.</p>
+
+<h2>Do it: merge in penguins-lab</h2>
+<ol class="steps" data-key="l3a">
+  <li><label><input type="checkbox"> In <code>penguins-lab</code>, switch to the receiving branch and merge your lesson-2 work:</label>
+<pre><code><span class="p">$ </span>git switch main
+<span class="p">$ </span>git merge add-cleaning
+Updating 1d28f0e..3ef57a2
+Fast-forward
+ clean.py | 5 +++++
+ 1 file changed, 5 insertions(+)</code></pre></li>
+  <li><label><input type="checkbox"> Delete the now-merged branch:</label>
+<pre><code><span class="p">$ </span>git branch -d add-cleaning
+Deleted branch add-cleaning (was 3ef57a2).</code></pre></li>
+</ol>
+
+<h2>Your first merge conflict</h2>
+<p>Git can't decide for you when "you changed the same part of the same file differently in the two branches."<a class="cite" href="#s1">1</a> That's a <a href="../reference/glossary.html#merge-conflict">merge conflict</a>. It isn't an error, just a question Git needs you to answer. GitHub has the same rule: the <strong>Merge pull request</strong> button stays disabled until conflicts are resolved.<a class="cite" href="#s4">4</a> Make one on purpose so it's familiar before an agent hands you one.</p>
+<ol class="steps" data-key="l3b">
+  <li><label><input type="checkbox"> Branch one: change line 1 of <code>README.md</code> to <code># Palmer Penguins Analysis</code>, then commit.</label>
+<pre><code><span class="p">$ </span>git switch -c readme-title
+<span class="c">#   ...edit line 1 of README.md...</span>
+<span class="p">$ </span>git commit -am "Retitle README"
+<span class="p">$ </span>git switch main</code></pre></li>
+  <li><label><input type="checkbox"> Branch two, also started from <code>main</code>: change the <em>same line</em> to <code># Penguin Data Lab</code>, then commit.</label>
+<pre><code><span class="p">$ </span>git switch -c readme-title-2
+<span class="c">#   ...edit line 1 of README.md...</span>
+<span class="p">$ </span>git commit -am "Rename project in README"
+<span class="p">$ </span>git switch main</code></pre></li>
+  <li><label><input type="checkbox"> Merge both. The first fast-forwards and the second collides:</label>
+<pre><code><span class="p">$ </span>git merge readme-title
+Fast-forward
+<span class="p">$ </span>git merge readme-title-2
+Auto-merging README.md
+CONFLICT (content): Merge conflict in README.md
+Automatic merge failed; fix conflicts and then commit the result.</code></pre></li>
+  <li><label><input type="checkbox"> Practise the escape hatch first. <code>git merge --abort</code> tries "to reconstruct the pre-merge state."<a class="cite" href="#s2">2</a> Run it, confirm <code>git status</code> is clean, then run <code>git merge readme-title-2</code> again.</label></li>
+  <li><label><input type="checkbox"> Open <code>README.md</code>. Git has written both versions into the file:</label>
+<pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+# Palmer Penguins Analysis
+=======
+# Penguin Data Lab
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; readme-title-2</code></pre>
+    <p>Above <code>=======</code> is the version from <code>HEAD</code>, the branch you're on. Below it is the branch you're merging in.<a class="cite" href="#s1">1</a> Edit the block until it says what you actually want, for example <code># Palmer Penguins Data Lab</code>, and delete all three marker lines.</p></li>
+  <li><label><input type="checkbox"> Tell Git it's resolved, and finish the merge. "Staging the file marks it as resolved."<a class="cite" href="#s1">1</a></label>
+<pre><code><span class="p">$ </span>git add README.md
+<span class="p">$ </span>git commit -m "Merge readme-title-2, combine titles"
+<span class="p">$ </span>git branch -d readme-title readme-title-2</code></pre></li>
+</ol>
+<div class="warn">Search the file for leftover <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> before you <code>git add</code>. Git will happily commit marker lines, and a <code>.py</code> file with markers in it won't even import.</div>
+
+<h2>Recall the commands</h2>
+<div class="drill" data-accept="git merge add-cleaning">
+  <p class="prompt">You're on <code>main</code>. Bring in the commits from <code>add-cleaning</code>.</p>
+</div>
+<div class="drill" data-accept="git branch -d add-cleaning || git branch --delete add-cleaning">
+  <p class="prompt">Safely delete the merged branch <code>add-cleaning</code>.</p>
+</div>
+<div class="drill" data-accept="git branch -D try-polars || git branch --delete --force try-polars">
+  <p class="prompt">Throw away the unmerged experiment branch <code>try-polars</code>.</p>
+</div>
+<div class="drill" data-accept="git merge --abort">
+  <p class="prompt">You're mid-conflict and want to go back to how things were before the merge.</p>
+</div>
+<div class="drill" data-accept="git merge --no-ff add-plot">
+  <p class="prompt">Merge <code>add-plot</code>, forcing a merge commit even if a fast-forward is possible.</p>
+</div>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q"><code>main</code> hasn't moved since you created <code>add-cleaning</code>. What does <code>git merge add-cleaning</code> do?</p>
+  <ul class="opts">
+    <li data-correct>slide main's pointer forward</li>
+    <li>create a two-parent commit</li>
+    <li>always raise a conflict</li>
+    <li>delete the add-cleaning branch</li>
+  </ul>
+  <p class="why">No divergent work means a fast-forward. Git just moves <code>main</code> to the branch tip, and no new commit is made.</p>
+</div>
+<div class="quiz">
+  <p class="q"><code>git branch -d add-plot</code> fails with "not fully merged." What is Git warning you about?</p>
+  <ul class="opts">
+    <li data-correct>Deleting it would lose commits</li>
+    <li>The branch has a conflict</li>
+    <li>GitHub must approve the delete</li>
+    <li>You must push it first</li>
+  </ul>
+  <p class="why"><code>add-plot</code> has commits that aren't in your current branch. Merge first, or use <code>-D</code> if you really mean to throw them away.</p>
+</div>
+<div class="quiz">
+  <p class="q">In a conflict block, what is the text <em>above</em> the <code>=======</code> line?</p>
+  <ul class="opts">
+    <li data-correct>your current branch's version</li>
+    <li>the incoming branch's version</li>
+    <li>the original common ancestor</li>
+    <li>Git's suggested final resolution</li>
+  </ul>
+  <p class="why">The top half is <code>HEAD</code>, the branch you ran <code>git merge</code> from. The bottom half is the branch being merged in.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<div class="primary-source">
+  Read <a href="https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging">Pro Git §3.2, "Basic Branching and Merging"</a>. It walks through a fast-forward, a merge commit, and a conflict, with diagrams (about 15 minutes). For more conflict practice, try GitHub Skills' <a href="https://github.com/skills/resolve-merge-conflicts">Resolve merge conflicts</a> course.
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"I have a merge conflict in <code>clean.py</code>. Explain each side of the conflict to me before changing anything,"</em> or <em>"When should I use <code>git branch -D</code> instead of <code>-d</code>?"</em> Asking Claude to explain a conflict before it resolves one is a good habit.
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Chacon &amp; Straub, <a href="https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging"><em>Pro Git</em>, §3.2 Basic Branching and Merging</a>.</li>
+    <li id="s2">Git reference, <a href="https://git-scm.com/docs/git-merge">git-merge</a> (fast-forward options, <code>--abort</code>, conflict presentation).</li>
+    <li id="s3">Git reference, <a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt--d">git-branch (-d, -D)</a>.</li>
+    <li id="s4">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/about-merge-conflicts">About merge conflicts</a>.</li>
+    <li id="s5">GitHub Docs, <a href="https://docs.github.com/en/pull-requests/reference/pull-request-merges#merge-your-commits">About pull request merges</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0002-create-and-switch.html">← Lesson 2: Create, switch, compare</a>
+  <a href="0004-push-and-pull-requests.html">Lesson 4: Push and pull requests →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+<script src="../assets/branch-sim.js"></script>
+<script>
+  BranchSim.mount(document.getElementById("sim3"), {
+    setup: [
+      "git commit -m 'load penguins.csv'",
+      "git commit -m 'explore species counts'",
+      "git switch -c add-cleaning",
+      "git commit -m 'add drop_missing'",
+      "git switch main",
+    ],
+    tasks: [
+      { text: "Merge <code>add-cleaning</code> into <code>main</code>. It should fast-forward.", check: (s) => s.isAncestor(s.commits[2].id, s.branches.main) && s.mergeCommits().length === 0 },
+      { text: "Delete <code>add-cleaning</code> with the safe <code>-d</code>.", check: (s) => !("add-cleaning" in s.branches) && s.isAncestor(s.commits[2].id, s.branches.main ?? "") },
+      { text: "Create a branch <code>add-plot</code> and commit on it.", check: (s) => s.commits.some((c) => c.born === "add-plot") },
+      { text: "Switch back to <code>main</code> and commit there too, so the branches diverge.", check: (s) => s.commits.some((c) => c.born === "main" && c.n > 3 && c.parents.length === 1) },
+      { text: "Merge <code>add-plot</code> into <code>main</code>. This time you get a merge commit.", check: (s) => s.mergeCommits().some((c) => c.born === "main") },
+      { text: "Delete <code>add-plot</code>. Why does <code>-d</code> work now?", check: (s) => !("add-plot" in s.branches) && s.mergeCommits().length > 0 },
+    ],
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub Branches for Agentic Coding</title>
+<meta name="description" content="A nine-lesson course for data science students: use GitHub branches, pull requests, and CI/CD to work safely with Claude Code.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <span class="course">GitHub Branches for Agentic Coding</span>
+  <nav aria-label="Site"><a href="reference/glossary.html">Glossary</a> · <a href="reference/cheatsheet.html">Cheat sheet</a> · <a href="reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">A short course · 9 lessons · about 15 minutes each</p>
+<h1>GitHub Branches for Agentic Coding</h1>
+<p class="subtitle">For data science students who can commit and push, and now want to let Claude Code work on their code without risking <code>main</code>.</p>
+
+<p>An AI coding agent can change a dozen files in a minute. Branches give that speed somewhere safe to land. The agent works on its own branch, you review its work as a pull request, continuous integration tests it automatically, and only then does it reach <code>main</code>. By the end of this course you will run that loop end to end, including two Claude Code sessions in parallel.</p>
+
+<div class="win">Each lesson gives you one concrete win: a simulator to drive, commands to recall from memory, or real steps in your own practice repository, <code>penguins-lab</code>.</div>
+
+<h2>Lessons</h2>
+<ol class="toc">
+  <li><span class="num">01</span><a href="lessons/0001-what-is-a-branch.html">What is a branch?</a>
+    <p>A branch is a movable pointer to a commit. Protect <code>main</code> in the simulator.</p></li>
+  <li><span class="num">02</span><a href="lessons/0002-create-and-switch.html">Create, switch, compare</a>
+    <p>Create <code>penguins-lab</code>, work on your first real branch, and see what changed with a three-dot diff.</p></li>
+  <li><span class="num">03</span><a href="lessons/0003-merge-and-clean-up.html">Merge and clean up</a>
+    <p>Fast-forward versus merge commit, deleting branches safely, and resolving your first merge conflict.</p></li>
+  <li><span class="num">04</span><a href="lessons/0004-push-and-pull-requests.html">Push and pull requests</a>
+    <p>Remotes, upstreams, and the GitHub flow: open, review, and squash-merge a pull request with <code>gh</code>.</p></li>
+  <li><span class="num">05</span><a href="lessons/0005-ci-cd-and-branches.html">CI/CD and branches</a>
+    <p>Run pytest on every pull request, read status checks, protect <code>main</code>, and deploy from it.</p></li>
+  <li><span class="num">06</span><a href="lessons/0006-claude-code-on-a-branch.html">Claude Code on a branch</a>
+    <p>Brief Claude on an agent branch, review its diff, and know when to rewind, restore, or delete.</p></li>
+  <li><span class="num">07</span><a href="lessons/0007-parallel-sessions-with-worktrees.html">Parallel sessions with worktrees</a>
+    <p>Run two Claude Code sessions side by side with <code>git worktree</code> and <code>claude -w</code>.</p></li>
+  <li><span class="num">08</span><a href="lessons/0008-notebooks-and-branches.html">Notebooks and branches</a>
+    <p>Why <code>.ipynb</code> files fight with branches, and how nbdime and Jupytext make peace.</p></li>
+  <li><span class="num">09</span><a href="lessons/0009-capstone-full-loop.html">Capstone: the full loop</a>
+    <p>Mixed retrieval practice, then issue → worktree → agent → PR → green CI → merge, all on your own.</p></li>
+</ol>
+
+<h2>Reference</h2>
+<ul>
+  <li><a href="reference/glossary.html">Glossary</a>: one term per idea, used consistently across every lesson.</li>
+  <li><a href="reference/cheatsheet.html">Branch cheat sheet</a>: every command in the course on two printable pages.</li>
+  <li><a href="reference/claude-code-workflow.html">Claude Code branch workflow</a>: the loop, prompt templates, review checklist, and recovery table.</li>
+</ul>
+
+<h2>Before you start</h2>
+<ul>
+  <li>Git installed, and a GitHub account where you can <code>clone</code>, <code>commit</code>, and <code>push</code>.</li>
+  <li>The <a href="https://cli.github.com/">GitHub CLI</a> (<code>gh</code>), logged in with <code>gh auth login</code>.</li>
+  <li>Python with <code>pandas</code> and <code>pytest</code>, plus <a href="https://code.claude.com/docs">Claude Code</a> from lesson 6 onward.</li>
+</ul>
+<p class="note">Commands are written for Git Bash, macOS, or Linux terminals. Every claim links to official documentation (Pro Git, git-scm.com, GitHub Docs, Claude Code docs), retrieved October 2026. This site practises what it teaches: every change arrives on a branch, passes CI in a pull request, and deploys to GitHub Pages from <code>main</code>. <a href="https://github.com/acatlin/github-branches">See the repository</a>.</p>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="https://github.com/acatlin/github-branches">Source on GitHub</a></footer>
+<script src="assets/course.js"></script>
+</body>
+</html>

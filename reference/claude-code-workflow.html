@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code Branch Workflow</title>
+<meta name="description" content="One-page reference: the branch → PR → CI loop for Claude Code tasks, with prompts, a review checklist, recovery moves, and gotchas.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="glossary.html">Glossary</a> · <a href="cheatsheet.html">Cheat sheet</a> · <a href="claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Reference</p>
+<h1>Claude Code branch workflow</h1>
+<p class="subtitle">One task, one <a href="glossary.html#agent-branch">agent branch</a>, one pull request. Covered in <a href="../lessons/0006-claude-code-on-a-branch.html">lesson 6</a> and <a href="../lessons/0007-parallel-sessions-with-worktrees.html">lesson 7</a>.</p>
+
+<h2 id="loop">The loop</h2>
+<figure>
+  <svg viewBox="0 0 600 600" role="img" aria-label="Flowchart: start from fresh main, create an agent branch or worktree, brief Claude, review the diff, push and open a pull request, wait for CI checks, squash merge and delete the branch, then pull main. If review or checks fail, fix on the same branch and loop back to briefing Claude.">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" class="ink-fill"/>
+      </marker>
+      <marker id="arrow-feat" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" class="feat-fill"/>
+      </marker>
+    </defs>
+    <!-- connectors -->
+    <g class="ink-line" stroke-width="1.5" marker-end="url(#arrow)">
+      <line x1="250" y1="56" x2="250" y2="74"/>
+      <line x1="250" y1="130" x2="250" y2="148"/>
+      <line x1="250" y1="204" x2="250" y2="222"/>
+      <line x1="250" y1="278" x2="250" y2="296"/>
+      <line x1="250" y1="352" x2="250" y2="370"/>
+      <line x1="250" y1="426" x2="250" y2="444"/>
+      <line x1="250" y1="500" x2="250" y2="518"/>
+    </g>
+    <!-- fix loop: from review (4) and CI (6) back to brief (3) -->
+    <path d="M470 250 L540 250 L540 176 L474 176" class="feat-line" stroke-width="1.5" fill="none" marker-end="url(#arrow-feat)"/>
+    <path d="M470 398 L540 398 L540 250" class="feat-line" stroke-width="1.5" fill="none"/>
+    <text x="548" y="300" class="label" transform="rotate(90 548 300)" text-anchor="middle">changes needed or checks red → fix on same branch</text>
+
+    <!-- boxes -->
+    <g class="rule-line" stroke-width="1">
+      <rect x="30" y="4" width="440" height="52" rx="4" class="bg-fill"/>
+      <rect x="30" y="78" width="440" height="52" rx="4" class="surface-fill"/>
+      <rect x="30" y="152" width="440" height="52" rx="4" class="surface-fill"/>
+      <rect x="30" y="226" width="440" height="52" rx="4" class="surface-fill"/>
+      <rect x="30" y="300" width="440" height="52" rx="4" class="surface-fill"/>
+      <rect x="30" y="374" width="440" height="52" rx="4" class="surface-fill"/>
+      <rect x="30" y="448" width="440" height="52" rx="4" class="surface-fill"/>
+      <rect x="30" y="522" width="440" height="52" rx="4" class="bg-fill"/>
+    </g>
+    <g>
+      <circle cx="30" cy="30" r="5" class="main-fill"/>
+      <text x="48" y="25" class="label" font-weight="600">1 · Start from a fresh main</text>
+      <text x="48" y="45">git switch main &amp;&amp; git pull</text>
+
+      <circle cx="30" cy="104" r="5" class="feat-fill"/>
+      <text x="48" y="99" class="label" font-weight="600">2 · Agent branch (or worktree) for this one task</text>
+      <text x="48" y="119">git switch -c NAME   ·   claude -w NAME</text>
+
+      <circle cx="30" cy="178" r="5" class="feat-fill"/>
+      <text x="48" y="173" class="label" font-weight="600">3 · Brief Claude: Explore → Plan → Implement → Commit</text>
+      <text x="48" y="193">small commits, descriptive messages</text>
+
+      <circle cx="30" cy="252" r="5" class="feat-fill"/>
+      <text x="48" y="247" class="label" font-weight="600">4 · Review the diff yourself</text>
+      <text x="48" y="267">git diff main...HEAD   ·   /diff   ·   /code-review</text>
+
+      <circle cx="30" cy="326" r="5" class="feat-fill"/>
+      <text x="48" y="321" class="label" font-weight="600">5 · Push and open a pull request</text>
+      <text x="48" y="341">git push -u origin NAME   ·   gh pr create --fill</text>
+
+      <circle cx="30" cy="400" r="5" class="feat-fill"/>
+      <text x="48" y="395" class="label" font-weight="600">6 · CI runs status checks on the merged result</text>
+      <text x="48" y="415">gh pr checks --watch</text>
+
+      <circle cx="30" cy="474" r="5" class="feat-fill"/>
+      <text x="48" y="469" class="label" font-weight="600">7 · Squash merge, delete the branch</text>
+      <text x="48" y="489">gh pr merge --squash --delete-branch</text>
+
+      <circle cx="30" cy="548" r="5" class="main-fill"/>
+      <text x="48" y="543" class="label" font-weight="600">8 · Back to main, pick the next task</text>
+      <text x="48" y="563">git switch main &amp;&amp; git pull</text>
+    </g>
+  </svg>
+  <figcaption>Blue = <code>main</code>, orange = the agent branch. Nothing reaches <code>main</code> except through step 7.</figcaption>
+</figure>
+
+<h2 id="prompts">Prompt templates</h2>
+<p>Following the Explore → Plan → Implement → Commit pattern from Claude Code's <a href="https://code.claude.com/docs/en/best-practices#explore-first-then-plan-then-code">best practices</a>.</p>
+<pre><code><span class="c"># Explore (read only)</span>
+Read clean.py and test_clean.py. Explain how missing values are handled. Don't change anything yet.
+
+<span class="c"># Plan</span>
+Plan how to add a standardize_columns() function with tests. List the files you'll touch.
+
+<span class="c"># Implement (on the agent branch)</span>
+We're on branch add-standardize-columns. Implement the plan, run pytest, and fix failures.
+
+<span class="c"># Commit + PR</span>
+Commit with a descriptive message and open a PR against main. Put "Closes #7" in the body.</code></pre>
+<p class="note">Claude opens PRs with <code>gh pr create</code>, so install and log in to the <code>gh</code> CLI (<a href="https://code.claude.com/docs/en/common-workflows#create-pull-requests">docs</a>). By default its commits carry a <code>Co-Authored-By: … &lt;noreply@anthropic.com&gt;</code> trailer and PR bodies say "🤖 Generated with Claude Code". Change this with the <code>attribution</code> setting (<a href="https://code.claude.com/docs/en/settings-reference#attribution">docs</a>).</p>
+
+<h2 id="checklist">Before you merge</h2>
+<ul>
+  <li>The PR is one logical change from one agent branch. Smaller PRs are easier to review and safer to squash.</li>
+  <li>You read the whole <a href="glossary.html#three-dot-diff">three-dot diff</a> (<code>git diff main...HEAD</code> or the PR's <em>Files changed</em> tab), and every changed file is one you expected.</li>
+  <li>No secrets (<code>.env</code>, API keys) and no bulky data files were committed. "Never commit API keys or OAuth tokens directly to your repository" (<a href="https://code.claude.com/docs/en/github-actions#protect-your-credentials">docs</a>).</li>
+  <li>Tests pass locally, and every <a href="glossary.html#status-check">status check</a> on the PR is green.</li>
+  <li>The PR description says what changed and why, and links the issue (<code>Closes #N</code>).</li>
+  <li>For a second opinion, use a fresh Claude session as reviewer: "A fresh context improves code review" (<a href="https://code.claude.com/docs/en/best-practices#run-multiple-claude-sessions">docs</a>).</li>
+</ul>
+
+<h2 id="recovery">Recovery moves</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Situation</th><th>Reach for</th></tr></thead>
+  <tbody>
+    <tr><td>Claude's last few edits went wrong, still mid-session</td><td><code>/rewind</code> (or <kbd>Esc</kbd> <kbd>Esc</kbd>) → restore code to a <a href="glossary.html#checkpoint">checkpoint</a>. It does not undo Bash-made changes (<a href="https://code.claude.com/docs/en/checkpointing#limitations">docs</a>).</td></tr>
+    <tr><td>One file has bad uncommitted edits</td><td><code>git restore FILE</code></td></tr>
+    <tr><td>The whole agent branch is a dead end</td><td><code>git switch main</code> then <code>git branch -D NAME</code> (and <code>git push origin --delete NAME</code> if you pushed it)</td></tr>
+    <tr><td>A merge hit conflicts you don't want to handle now</td><td><code>git merge --abort</code></td></tr>
+    <tr><td>A bad PR is already merged into <code>main</code></td><td>Revert the pull request on GitHub, which opens a new PR that undoes it (<a href="https://docs.github.com/en/get-started/using-github/github-flow">GitHub flow</a>)</td></tr>
+    <tr><td>You deleted a PR's branch too soon</td><td><strong>Restore branch</strong> on the PR page (<a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/deleting-and-restoring-branches-in-a-pull-request">docs</a>)</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="ci">Minimal CI workflow</h2>
+<p>Save as <code>.github/workflows/ci.yml</code>. It runs tests on every PR into <code>main</code> and on every push to <code>main</code>. The structure follows <a href="https://docs.github.com/en/actions/tutorials/build-and-test-code/python">GitHub's Python tutorial</a>, with action versions current as of October 2026.</p>
+<pre><code>name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pytest</code></pre>
+
+<h2 id="gotchas">Gotchas</h2>
+<ul>
+  <li><strong><code>/branch</code> branches the conversation, not git.</strong> Use <code>git switch -c</code> for a git branch (<a href="https://code.claude.com/docs/en/commands">docs</a>).</li>
+  <li><strong>Checkpoints are not commits.</strong> They miss files changed by Bash commands (<code>rm</code>, <code>mv</code>, <code>cp</code>), and the docs call them "not a replacement for version control" (<a href="https://code.claude.com/docs/en/checkpointing#not-a-replacement-for-version-control">docs</a>).</li>
+  <li><strong><code>claude -w</code> needs at least one commit</strong> in the repo, and by default it branches from the <em>remote</em> default branch, not your local HEAD (<a href="https://code.claude.com/docs/en/worktrees#choose-the-base-branch">docs</a>).</li>
+  <li><strong>Add <code>.claude/worktrees/</code> to <code>.gitignore</code></strong> so worktree contents don't show up as untracked files (<a href="https://code.claude.com/docs/en/worktrees#start-claude-in-a-worktree">docs</a>).</li>
+  <li><strong>Branch protection and rulesets need a public repo on GitHub Free.</strong> Private repos need a paid plan (<a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">docs</a>).</li>
+  <li><strong>A workflow skipped by a branch or path filter leaves required checks "Pending"</strong>, which blocks the merge (<a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpull_requestpull_request_targetbranchesbranches-ignore">docs</a>).</li>
+  <li><strong><code>Closes #N</code> only works when the PR targets the default branch</strong> (<a href="https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#about-linked-issues-and-pull-requests">docs</a>).</li>
+  <li><strong>Commits pushed with the default <code>GITHUB_TOKEN</code> don't trigger workflows</strong>, for example from the <code>@claude</code> GitHub Action (<a href="https://code.claude.com/docs/en/github-actions#ci-not-running-on-claudes-commits">docs</a>).</li>
+</ul>
+</main>
+<footer class="site-footer">Part of <a href="../index.html">GitHub Branches for Agentic Coding</a>. Sources: <a href="https://code.claude.com/docs/en/best-practices">Claude Code docs</a>, <a href="https://docs.github.com/en/get-started/using-github/github-flow">GitHub Docs</a>; retrieved October 2026.</footer>
+<script src="../assets/course.js"></script>
+</body>
+</html>

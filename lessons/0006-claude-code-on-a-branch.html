@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code on a Branch</title>
+<meta name="description" content="Lesson 6: run a Claude Code task on its own agent branch — brief, review the diff, open a pull request, and throw away experiments safely.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a> · <a href="../reference/claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Lesson 6 of 9 · about 15 minutes</p>
+<h1>Claude Code on a branch</h1>
+<p class="subtitle">Give the agent a sandbox, read what it built, and only then let it near <code>main</code>.</p>
+
+<div class="win">You will run one complete Claude Code task on an <a href="../reference/glossary.html#agent-branch">agent branch</a>: brief it, review its commits, have it open a pull request that CI checks, and know how to throw the whole thing away if it goes wrong.</div>
+
+<h2>The loop</h2>
+<p>You already have every piece: branches (lessons 1–3), pull requests (lesson 4), and CI on pull requests (lesson 5). An agent branch puts them in order around Claude Code:</p>
+<ol>
+  <li><strong>Start from a fresh <code>main</code>.</strong> Switch to <code>main</code> and pull, so the agent builds on the latest work.</li>
+  <li><strong>Create the branch.</strong> One task, one branch: <code>git switch -c standardize-columns</code>. You can also ask Claude to create it. Claude Code gets a git status snapshot at session start (current branch, main branch, recent commits), so it knows where it is.<a class="cite" href="#s4">4</a></li>
+  <li><strong>Brief the agent: explore → plan → implement → commit.</strong> Claude Code's best-practices guide recommends exactly this order. The last step is a prompt like "commit with a descriptive message and open a PR."<a class="cite" href="#s1">1</a></li>
+  <li><strong>Review the branch.</strong> Read the commits and the <a href="../reference/glossary.html#three-dot-diff">three-dot diff</a> before anyone else does.</li>
+  <li><strong>Ship as a pull request.</strong> Claude opens it with <code>gh pr create</code>.<a class="cite" href="#s2">2</a> CI runs on it automatically, because your workflow triggers on pull requests to <code>main</code>.</li>
+  <li><strong>Merge or discard.</strong> Squash-merge good work and delete the branch. Bad work? Delete the branch, and <code>main</code> never saw it.</li>
+</ol>
+
+<h2>Briefing prompts you can copy</h2>
+<p>The task: add <code>standardize_columns(df)</code> to <code>clean.py</code>. It should turn names like <code>"Bill Length (mm)"</code> into lower snake_case (<code>bill_length_mm</code>) and come with a test. Name the branch and the rules in the prompt itself, so they don't depend on the agent remembering.</p>
+<h3>1 · Kickoff (explore, then plan)</h3>
+<pre><code>We're on branch standardize-columns. Never commit to main.
+First explore: read clean.py and test_clean.py. Then propose a plan for a
+standardize_columns(df) function that converts column names to lower
+snake_case (e.g. "Bill Length (mm)" -&gt; "bill_length_mm").
+Don't write any code until I approve the plan.</code></pre>
+<h3>2 · Implement and commit</h3>
+<pre><code>Plan approved. Implement it and add a pytest test in test_clean.py.
+Run pytest. Make small commits with descriptive messages on this branch.</code></pre>
+<h3>3 · Ship</h3>
+<pre><code>Tests pass. Push this branch and open a pull request against main with
+gh pr create. Summarize the change and how you tested it in the description.</code></pre>
+<p class="note">Install and log in to the <code>gh</code> CLI first. The best-practices guide notes that Claude "knows how to use it for creating issues, opening pull requests, and reading comments."<a class="cite" href="#s1">1</a></p>
+
+<h2>Review before you merge</h2>
+<p>An agent can make many commits quickly. Your job is to read them. Three commands, run on the agent branch, show everything:</p>
+<pre><code><span class="p">$ </span>git log --oneline main..HEAD   <span class="c"># the commits this branch adds</span>
+<span class="p">$ </span>git diff main...HEAD          <span class="c"># only the changes made on this branch</span>
+<span class="p">$ </span>git diff main...HEAD --stat   <span class="c"># which files, how much</span></code></pre>
+<p>The three dots matter. <code>git diff A...B</code> compares from the point where the branches split, so you see only what the branch changed, the same view a pull request shows.<a class="cite" href="#s6">6</a> Inside Claude Code, <code>/diff</code> shows the changes and <code>/code-review</code> "checks the current diff for correctness bugs."<a class="cite" href="#s5">5</a></p>
+<p>For a stronger review, use a <strong>second, fresh session</strong>. Claude Code's guide suggests a writer/reviewer pattern because "A fresh context improves code review since Claude won't be biased toward code it just wrote."<a class="cite" href="#s1">1</a></p>
+<pre><code>Review the diff of this branch against main (git diff main...HEAD).
+Look for bugs, missing edge cases, and untested behaviour. Don't edit files.</code></pre>
+
+<h3>What the agent's commits look like</h3>
+<p>By default, Claude's commits carry a git trailer such as <code>Co-Authored-By: Claude … &lt;noreply@anthropic.com&gt;</code>. Pull requests it opens end with "🤖 Generated with Claude Code." You can change both with the <code>attribution</code> setting (<code>attribution.commit</code>, <code>attribution.pr</code>).<a class="cite" href="#s4">4</a> The trailer makes agent-written commits easy to spot in <code>git log</code>.</p>
+
+<h2>Undo: checkpoints are not git</h2>
+<p>Claude Code takes a <a href="../reference/glossary.html#checkpoint">checkpoint</a> of your code before each prompt. You can restore it with <code>/rewind</code> or by pressing <kbd>Esc</kbd> twice.<a class="cite" href="#s3">3</a> That's handy for undoing the last turn, but the docs are blunt: checkpoints are "Not a replacement for version control."<a class="cite" href="#s3">3</a> In particular, "Checkpointing does not track files modified by Bash commands" (e.g. <code>rm</code>, <code>mv</code>, <code>cp</code>), and most subagent edits aren't restored either.<a class="cite" href="#s3">3</a></p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Situation</th><th>Do this</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Claude's last turn made a bad file edit and you want the previous state back</td><td><code>/rewind</code> (or <kbd>Esc</kbd> <kbd>Esc</kbd>) → restore code</td><td>A checkpoint was taken before that prompt.<a class="cite" href="#s3">3</a></td></tr>
+    <tr><td>Claude moved or deleted files with Bash (<code>rm</code>, <code>mv</code>)</td><td>Use git: <code>git restore &lt;file&gt;</code>, or discard the branch</td><td>Checkpoints don't track Bash file changes.<a class="cite" href="#s3">3</a></td></tr>
+    <tr><td>One file has bad uncommitted changes</td><td><code>git restore clean.py</code></td><td>Restores the file in the working tree from git.<a class="cite" href="#s9">9</a></td></tr>
+    <tr><td>The whole experiment is bad, commits and all</td><td><code>git switch main</code>, then <code>git branch -D standardize-columns</code></td><td><code>-D</code> force-deletes an unmerged branch.<a class="cite" href="#s7">7</a> <code>main</code> never moved.</td></tr>
+    <tr><td>The work is good</td><td>Push, open a PR, let CI run, squash-merge</td><td>The normal path from lessons 4–5.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="warn">Claude Code's <code>/branch</code> command does <strong>not</strong> create a git branch. It branches the <em>conversation</em> ("Create a branch of the current conversation at this point").<a class="cite" href="#s5">5</a> For a git branch, use <code>git switch -c</code> or ask Claude to create one.</p>
+
+<h2>Bonus: <code>@claude</code> on GitHub</h2>
+<p>Claude Code can also work from GitHub itself. Mention <code>@claude</code> in a pull request or issue comment "to have Claude analyze code, implement changes, and push commits."<a class="cite" href="#s8">8</a> Run <code>/install-github-app</code> in Claude Code to set it up. It pushes a branch with the workflow files and a pull request ready to create, so even the setup arrives on a branch.<a class="cite" href="#s8">8</a> One gotcha: "GitHub doesn't trigger workflows on commits made with the default <code>GITHUB_TOKEN</code>". Commits pushed by the action that way won't run your CI unless you configure it.<a class="cite" href="#s8">8</a></p>
+
+<h2>Do it for real</h2>
+<p>In your <code>penguins-lab</code> repository (with the CI workflow from lesson 5):</p>
+<ol class="steps" data-key="l6">
+  <li><label><input type="checkbox"> Refresh main: <code>git switch main</code>, then <code>git pull</code>.</label></li>
+  <li><label><input type="checkbox"> Create the agent branch: <code>git switch -c standardize-columns</code>.</label></li>
+  <li><label><input type="checkbox"> Run <code>claude</code> and paste the <strong>kickoff</strong> prompt. Read the plan and push back if it's wrong.</label></li>
+  <li><label><input type="checkbox"> Paste the <strong>implement</strong> prompt. Let it write the code and test, run <code>pytest</code>, and commit.</label></li>
+  <li><label><input type="checkbox"> Review: <code>git log --oneline main..HEAD</code> and <code>git diff main...HEAD</code>. Optionally run a second session with the reviewer prompt.</label></li>
+  <li><label><input type="checkbox"> Paste the <strong>ship</strong> prompt, then watch CI: <code>gh pr checks --watch</code>.</label></li>
+  <li><label><input type="checkbox"> When it's green: <code>gh pr merge --squash --delete-branch</code>, then <code>git switch main</code> and <code>git pull</code>.</label></li>
+  <li><label><input type="checkbox"> Practise discarding: <code>git switch -c try-polars</code>, ask Claude to rewrite <code>drop_missing</code> with polars, then <code>git switch main</code> and <code>git branch -D try-polars</code>. Check that <code>main</code> is unchanged.</label></li>
+</ol>
+
+<h2>Check yourself</h2>
+<div class="quiz">
+  <p class="q">Claude ran a Bash script that deleted and moved files. Can <code>/rewind</code> bring them back?</p>
+  <ul class="opts">
+    <li data-correct>No — use git instead</li>
+    <li>Yes — checkpoints track everything</li>
+    <li>Yes — but only once</li>
+    <li>No — they're gone forever</li>
+  </ul>
+  <p class="why">Checkpointing does not track files changed by Bash commands. Committed work is safe in git, so restore or discard with git.</p>
+</div>
+<div class="quiz">
+  <p class="q">On the agent branch, what does <code>git diff main...HEAD</code> show?</p>
+  <ul class="opts">
+    <li data-correct>Only changes made on this branch</li>
+    <li>Changes on main you don't have</li>
+    <li>Uncommitted edits in the working tree</li>
+    <li>Every commit message on both branches</li>
+  </ul>
+  <p class="why">Three dots diff from the merge base, so you see only what the branch changed. It's the same view a pull request shows.</p>
+</div>
+<div class="quiz">
+  <p class="q">What does Claude Code's <code>/branch</code> command create?</p>
+  <ul class="opts">
+    <li data-correct>a copy of the conversation</li>
+    <li>a new git feature branch</li>
+    <li>a worktree for the session</li>
+    <li>a pull request on GitHub</li>
+  </ul>
+  <p class="why"><code>/branch</code> forks the conversation. Git branches come from <code>git switch -c</code>, or from asking Claude to run it.</p>
+</div>
+<div class="quiz">
+  <p class="q">The agent's experiment on <code>try-polars</code> is a mess (three commits, not merged). Best cleanup?</p>
+  <ul class="opts">
+    <li data-correct>Switch to main, delete branch</li>
+    <li>Revert each commit on main</li>
+    <li>Delete the whole local repository</li>
+    <li>Rewind, then force-push to main</li>
+  </ul>
+  <p class="why"><code>git switch main</code>, then <code>git branch -D try-polars</code>. The commits never touched <code>main</code>, so there is nothing to revert.</p>
+</div>
+<p class="score" data-quiz-score></p>
+
+<h3>Command drills</h3>
+<div class="drill" data-accept="git switch -c standardize-columns || git checkout -b standardize-columns">
+  <p class="prompt">Create and switch to the agent branch <code>standardize-columns</code>.</p>
+</div>
+<div class="drill" data-accept="git log --oneline main..HEAD || git log --oneline main..standardize-columns">
+  <p class="prompt">List, one line each, the commits on the current branch that aren't on <code>main</code>.</p>
+</div>
+<div class="drill" data-accept="git diff main...HEAD || git diff main...standardize-columns">
+  <p class="prompt">Show only the changes the current branch made since it split from <code>main</code>.</p>
+</div>
+<div class="drill" data-accept="git branch -D try-polars || git branch --delete --force try-polars">
+  <p class="prompt">You're on <code>main</code>. Throw away the unmerged branch <code>try-polars</code>.</p>
+</div>
+
+<div class="primary-source">
+  Read Claude Code's <a href="https://code.claude.com/docs/en/best-practices">Best practices</a> guide, especially "Explore first, then plan, then code" and "Run multiple Claude sessions." It's the official playbook this lesson's loop comes from (about 15 minutes).
+</div>
+
+<div class="ask-agent">
+  Ask Claude: <em>"Walk me through what you'd do on a new branch for this task before you touch any files,"</em> or <em>"Show me the commits on this branch that aren't on main and explain each one."</em> Making it explain its own diff is a great review habit.
+</div>
+
+<section class="sources" id="sources">
+  <h2>Sources</h2>
+  <ol>
+    <li id="s1">Claude Code docs, <a href="https://code.claude.com/docs/en/best-practices">Best practices</a> (explore → plan → implement → commit; use CLI tools; run multiple sessions; rewind with checkpoints).</li>
+    <li id="s2">Claude Code docs, <a href="https://code.claude.com/docs/en/common-workflows#create-pull-requests">Common workflows — Create pull requests</a>.</li>
+    <li id="s3">Claude Code docs, <a href="https://code.claude.com/docs/en/checkpointing">Checkpointing</a> (how checkpoints work; limitations; not a replacement for version control).</li>
+    <li id="s4">Claude Code docs, <a href="https://code.claude.com/docs/en/settings-reference#attribution">Settings reference — attribution</a> and <a href="https://code.claude.com/docs/en/settings-reference#includegitinstructions">includeGitInstructions</a>.</li>
+    <li id="s5">Claude Code docs, <a href="https://code.claude.com/docs/en/commands">Commands</a> (<code>/branch</code>, <code>/diff</code>, <code>/code-review</code>).</li>
+    <li id="s6">Git reference, <a href="https://git-scm.com/docs/git-diff">git-diff</a> (<code>A...B</code> semantics).</li>
+    <li id="s7">Git reference, <a href="https://git-scm.com/docs/git-branch#Documentation/git-branch.txt--d">git-branch</a> (<code>-d</code> vs <code>-D</code>).</li>
+    <li id="s8">Claude Code docs, <a href="https://code.claude.com/docs/en/github-actions">Claude Code GitHub Actions</a>.</li>
+    <li id="s9">Git reference, <a href="https://git-scm.com/docs/git-restore">git-restore</a>.</li>
+  </ol>
+</section>
+
+<nav class="lesson-nav" aria-label="Lesson navigation">
+  <a href="0005-ci-cd-and-branches.html">← Lesson 5: CI/CD and branches</a>
+  <a href="0007-parallel-sessions-with-worktrees.html">Lesson 7: Parallel sessions →</a>
+</nav>
+</main>
+<footer class="site-footer">GitHub Branches for Agentic Coding · <a href="../reference/glossary.html">Glossary</a> · <a href="../reference/cheatsheet.html">Cheat sheet</a></footer>
+<script src="../assets/course.js"></script>
+<script src="../assets/quiz.js"></script>
+<script src="../assets/drill.js"></script>
+</body>
+</html>

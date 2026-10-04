@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Branches Glossary</title>
+<meta name="description" content="The canonical vocabulary for the GitHub Branches for Agentic Coding course.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="course" href="../index.html">GitHub Branches for Agentic Coding</a>
+  <nav aria-label="Site"><a href="glossary.html">Glossary</a> · <a href="cheatsheet.html">Cheat sheet</a> · <a href="claude-code-workflow.html">Claude workflow</a> · <button class="theme-toggle" type="button">Theme</button></nav>
+</header>
+<main>
+<p class="kicker">Reference</p>
+<h1>Glossary</h1>
+<p class="subtitle">One word per idea. Every lesson uses these terms and avoids the aliases in italics.</p>
+
+<h2 id="core">The core model</h2>
+<dl class="glossary">
+  <dt id="commit">Commit</dt>
+  <dd>A saved snapshot of the whole project, identified by a hash (e.g. <code>a1f3c2e</code>), that points back to its parent commit(s). <span class="avoid">Avoid: save, version.</span></dd>
+
+  <dt id="branch">Branch</dt>
+  <dd>A lightweight, movable pointer to one commit; when you commit on a branch, the pointer moves forward to the new commit (<a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell">Pro Git 3.1</a>). <span class="avoid">Avoid: copy, fork (a fork is a whole copy of a repository).</span></dd>
+
+  <dt id="head">HEAD</dt>
+  <dd>Git's pointer to the branch you are currently on — the branch your next commit will move.</dd>
+
+  <dt id="default-branch">Default branch (main)</dt>
+  <dd>The branch GitHub shows visitors, clones check out, and pull requests target by default; GitHub names it <code>main</code> (<a href="https://docs.github.com/en/pull-requests/reference/branches#about-the-default-branch">GitHub Docs</a>). <span class="avoid">Avoid: master (older Git default), trunk.</span></dd>
+
+  <dt id="feature-branch">Feature branch</dt>
+  <dd>A short-lived branch holding one self-contained change, merged into <code>main</code> when done. <span class="avoid">Avoid: topic branch, dev branch.</span></dd>
+
+  <dt id="working-tree">Working tree</dt>
+  <dd>The files you see and edit on disk; switching branches rewrites the working tree to match the branch's commit. <span class="avoid">Avoid: workspace, local copy.</span></dd>
+</dl>
+
+<h2 id="combining">Combining work</h2>
+<dl class="glossary">
+  <dt id="merge">Merge</dt>
+  <dd>Bringing the commits of one branch into the current branch.</dd>
+
+  <dt id="fast-forward">Fast-forward merge</dt>
+  <dd>A merge where the current branch has not moved since the other branch started, so Git simply slides the pointer forward — no new commit.</dd>
+
+  <dt id="merge-commit">Merge commit</dt>
+  <dd>A commit with two parents that joins two diverged branches.</dd>
+
+  <dt id="merge-conflict">Merge conflict</dt>
+  <dd>A merge Git cannot finish automatically because both branches changed the same lines differently; Git marks the spot with <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>.</dd>
+
+  <dt id="squash-merge">Squash merge</dt>
+  <dd>Merging a pull request by combining all its commits into one new commit on the base branch.</dd>
+
+  <dt id="three-dot-diff">Three-dot diff</dt>
+  <dd><code>git diff main...feature</code>: only the changes made on <code>feature</code> since it split from <code>main</code> — what a pull request shows.</dd>
+</dl>
+
+<h2 id="remote">Remotes and GitHub</h2>
+<dl class="glossary">
+  <dt id="remote-term">Remote (origin)</dt>
+  <dd>Another copy of the repository, usually on GitHub; <code>origin</code> is just the default name <code>git clone</code> gives it.</dd>
+
+  <dt id="remote-tracking-branch">Remote-tracking branch</dt>
+  <dd>A read-only local pointer such as <code>origin/main</code> recording where a branch was on the remote the last time you talked to it.</dd>
+
+  <dt id="upstream">Upstream</dt>
+  <dd>The remote branch a local branch is linked to, so plain <code>git push</code> and <code>git pull</code> know where to go; set with <code>git push -u</code>. <span class="avoid">Avoid: tracking target.</span></dd>
+
+  <dt id="pull-request">Pull request (PR)</dt>
+  <dd>A GitHub proposal to merge a head branch into a base branch, with a diff, discussion, and checks.</dd>
+
+  <dt id="head-base">Head branch / base branch</dt>
+  <dd>In a pull request, the head branch holds the proposed changes; the base branch (usually <code>main</code>) receives them.</dd>
+
+  <dt id="draft-pr">Draft pull request</dt>
+  <dd>A pull request marked work-in-progress; it cannot be merged until marked ready for review.</dd>
+</dl>
+
+<h2 id="cicd">CI/CD</h2>
+<dl class="glossary">
+  <dt id="mainline">Mainline</dt>
+  <dd>The single shared branch (<code>main</code>) that represents the current state of the product (<a href="https://martinfowler.com/articles/branching-patterns.html#mainline">Fowler</a>).</dd>
+
+  <dt id="ci">Continuous integration (CI)</dt>
+  <dd>Merging small changes into the mainline frequently, each one verified by an automated build and tests.</dd>
+
+  <dt id="cd">Continuous deployment (CD)</dt>
+  <dd>Automatically building, testing, and publishing every change that lands on the mainline.</dd>
+
+  <dt id="workflow">Workflow</dt>
+  <dd>A GitHub Actions automation defined in <code>.github/workflows/*.yml</code>, triggered by events such as <code>push</code> or <code>pull_request</code>. <span class="avoid">Avoid: pipeline (fine elsewhere, but not GitHub's term).</span></dd>
+
+  <dt id="status-check">Status check</dt>
+  <dd>A pass/fail result (often a workflow job) reported on a commit and shown on the pull request.</dd>
+
+  <dt id="branch-protection">Branch protection</dt>
+  <dd>Repository rules (protection rules or rulesets) that block changes to a branch unless conditions are met — e.g. a pull request with passing status checks.</dd>
+</dl>
+
+<h2 id="agentic">Agentic coding</h2>
+<dl class="glossary">
+  <dt id="agent-branch">Agent branch</dt>
+  <dd>In this course: a feature branch created for one Claude Code task, so the agent's commits are isolated and reviewable as a pull request.</dd>
+
+  <dt id="worktree">Worktree</dt>
+  <dd>An extra working tree attached to the same repository, with its own branch checked out, so two sessions can work side by side (<a href="https://git-scm.com/docs/git-worktree">git worktree</a>).</dd>
+
+  <dt id="checkpoint">Checkpoint</dt>
+  <dd>Claude Code's automatic, session-level snapshot of files before each prompt, restorable with <code>/rewind</code>; not a replacement for commits (<a href="https://code.claude.com/docs/en/checkpointing#not-a-replacement-for-version-control">Claude Code docs</a>).</dd>
+</dl>
+<p class="note">Name trap: Claude Code's <code>/branch</code> command branches the <em>conversation</em>, not git (<a href="https://code.claude.com/docs/en/commands">Claude Code commands</a>).</p>
+</main>
+<footer class="site-footer">Part of <a href="../index.html">GitHub Branches for Agentic Coding</a>. Sources retrieved October 2026.</footer>
+<script src="../assets/course.js"></script>
+</body>
+</html>
